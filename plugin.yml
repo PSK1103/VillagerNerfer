@@ -1,0 +1,13 @@
+main: me.PSK1103.VillagerNerfer.VillagerNerfer
+name: VillagerNerfer
+author: PSK1103
+api-version: "1.14"
+version: 1.1.0
+description: Is based loosely on VillagerLobotomizatorNator, improved 1x1 hole detection and configurable trade restock system that closely matches regular trade cycle.
+
+commands:
+
+  VNerfer:
+    description: Reloading the plugin and resetting previous villagers to normal state
+    aliases: vn
+    usage: do /vn help for all use cases

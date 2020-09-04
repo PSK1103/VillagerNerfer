@@ -1,0 +1,8 @@
+#sets the number of ticks after which the plugin checks for villager's position
+check-interval: 200
+
+#sets max number of villagers restock in a work day
+max-daily-restocks: 2
+
+#sets the number of cycles till the plugin checks if a villager needs restocking
+cycles-till-next-restock: 1
