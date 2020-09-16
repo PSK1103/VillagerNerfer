@@ -62,8 +62,6 @@ public class VillagerNerferCommands implements CommandExecutor {
                         return true;
                     case "highlight":
                     case "hl":
-
-
                         Bukkit.getScheduler().runTaskLater(plugin, () -> {
                             int [] count = {0};
                             Bukkit.getWorlds().forEach(world ->
@@ -178,6 +176,26 @@ public class VillagerNerferCommands implements CommandExecutor {
                             return true;
                         }
                         break;
+
+                    case "help":
+
+                        if(commandSender instanceof Player) {
+                            Player player = (Player) commandSender;
+                            player.sendMessage(ChatColor.LIGHT_PURPLE + "===============Villager Nerfer v" + plugin.getDescription().getVersion() + "===============");
+                            player.sendMessage(ChatColor.GOLD + "/vnerfer count (active/inactive): " + ChatColor.GREEN + "Display number of villagers (active or inactive) being tracked by the plugin");
+                            player.sendMessage(ChatColor.GOLD + "/vnerfer  highlight: " + ChatColor.GREEN + "Highlights all nerfed villagers");
+                            player.sendMessage(ChatColor.GOLD + "/vnerfer force (count): " + ChatColor.GREEN + "Forces the plugin to track nearest (count) villager(s)");
+                            player.sendMessage(ChatColor.GOLD + "/vnerfer reload: " + ChatColor.GREEN + "Refreshes the plugin and reloads all tracked villagers");
+                        }
+                        else {
+                            System.out.println("===============Villager Nerfer v" + plugin.getDescription().getVersion() + "===============");
+                            System.out.println("/vnerfer count (active/inactive): Display number of villagers (active or inactive) being tracked by the plugin");
+                            System.out.println("/vnerfer  highlight: Highlights all nerfed villagers");
+                            System.out.println("/vnerfer force (count): Forces the plugin to track nearest (count) villager(s)");
+                            System.out.println("/vnerfer reload: Refreshes the plugin and reloads all tracked villagers");
+                        }
+
+                        return true;
                 }
             } else if(strings.length==2) {
                 switch (strings[0]) {
@@ -280,8 +298,10 @@ public class VillagerNerferCommands implements CommandExecutor {
                                 player.sendMessage(ChatColor.RED + "No villager found");
                             }
 
-                            u.forEach( s -> plugin.getStorage().addVillager((Villager)Bukkit.getEntity(UUID.fromString(s))));
-                            player.sendMessage(ChatColor.YELLOW + "Nerfed " + u.size() + " villagers");
+                            for(int i = 0;i < Math.min(count[0],u.size()); i++) {
+                                plugin.getStorage().addVillager((Villager)Bukkit.getEntity(UUID.fromString(u.get(i))));
+                            }
+                            player.sendMessage(ChatColor.YELLOW + "Nerfed " + Math.min(count[0],u.size()) + " villagers");
                             return true;
 
                         }
