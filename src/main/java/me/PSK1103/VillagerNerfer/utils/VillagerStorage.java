@@ -84,15 +84,24 @@ public class VillagerStorage {
                     ids.add(v.getUniqueId().toString());
                     continue;
                 }
-                if (VillagerStorage.canMove(v.getLocation())) {
-                    v.setAware(true);
+                if (VillagerStorage.canMove(v.getLocation()) && v.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) {
+                    ids.add(v.getUniqueId().toString());
+                    continue;
+                }
+                if(canMove(v.getLocation()) && v.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM) {
                     v.setAI(true);
+                    v.setAware(true);
                     continue;
                 }
                 if (VillagerStorage.this.exemptVillagers.contains(v.getUniqueId().toString()))
-                    return;
-                v.setAware(false);
+                    continue;
+
+                if(v.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM) {
+                    ids.add(v.getUniqueId().toString());
+                    continue;
+                }
                 v.setAI(false);
+                v.setAware(false);
                 if (v.getLocation().getBlock().isPassable()) {
                     v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY(), 0.0D));
                     if (VillagerStorage.SPECIAL_IMPASSABLES.contains(v.getLocation().add(0.0D, -1.0D, 0.0D).getBlock().getType())) {
@@ -160,7 +169,16 @@ public class VillagerStorage {
                     }
                 }
             }
-            ids.forEach(id -> VillagerStorage.this.villagers.remove(id));
+            ids.forEach(id -> {
+                Villager v = villagers.get(id);
+                VillagerStorage.this.villagers.remove(id);
+                if(v.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) {
+                    spawnRegularVillager(v);
+                }
+                else {
+                    spawnNerfedVillager(v);
+                }
+            });
         }
     }
 
@@ -235,7 +253,18 @@ public class VillagerStorage {
     public void addVillager(@Nonnull Villager v) {
         if (this.villagers.containsKey(v.getUniqueId().toString()))
             return;
-        Villager v2 = v.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM ? spawnNerfedVillager(v) : v;
+
+        Villager v2 = null;
+
+        if(v.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM && !canMove(v.getLocation()))
+            v2 = v;
+        else if(v.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM && canMove(v.getLocation()))
+            v2 = spawnRegularVillager(v);
+        else if(v.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM && canMove(v.getLocation()))
+            v2 = v;
+        else if(v.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM && !canMove(v.getLocation()))
+            v2 = spawnNerfedVillager(v);
+
         if (v2 == null)
             return;
         this.villagers.put(v2.getUniqueId().toString(), v2);
@@ -339,12 +368,14 @@ public class VillagerStorage {
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
         if (isOccupied(w.getBlockAt(x + 1, y, z).getLocation())) {
+            System.out.println("E occupied");
             return Villager.Profession.NONE;
         }
         if (getProfession(w.getBlockAt(x + 1, y, z).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x + 1, y, z).getLocation());
             return getProfession(w.getBlockAt(x + 1, y, z).getType());
         }
+        System.out.println("E empty");
         return Villager.Profession.NONE;
     }
 
@@ -354,12 +385,14 @@ public class VillagerStorage {
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
         if (isOccupied(w.getBlockAt(x - 1, y, z).getLocation())) {
+            System.out.println("W occupied");
             return Villager.Profession.NONE;
         }
         if (getProfession(w.getBlockAt(x - 1, y, z).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x - 1, y, z).getLocation());
             return getProfession(w.getBlockAt(x - 1, y, z).getType());
         }
+        System.out.println("W empty");
         return Villager.Profession.NONE;
     }
 
@@ -369,12 +402,14 @@ public class VillagerStorage {
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
         if (isOccupied(w.getBlockAt(x, y, z + 1).getLocation())) {
+            System.out.println("S occupied");
             return Villager.Profession.NONE;
         }
         if (getProfession(w.getBlockAt(x, y, z + 1).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x, y, z + 1).getLocation());
             return getProfession(w.getBlockAt(x, y, z + 1).getType());
         }
+        System.out.println("S empty");
         return Villager.Profession.NONE;
     }
 
@@ -384,12 +419,14 @@ public class VillagerStorage {
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
         if (isOccupied(w.getBlockAt(x, y, z - 1).getLocation())) {
+            System.out.println("N occupied");
             return Villager.Profession.NONE;
         }
         if (getProfession(w.getBlockAt(x, y, z - 1).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x, y, z - 1).getLocation());
             return getProfession(w.getBlockAt(x, y, z - 1).getType());
         }
+        System.out.println("N empty");
         return Villager.Profession.NONE;
     }
 
@@ -399,12 +436,14 @@ public class VillagerStorage {
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
         if (isOccupied(w.getBlockAt(x, y - 1, z).getLocation())) {
+            System.out.println("Z occupied");
             return Villager.Profession.NONE;
         }
         if (getProfession(w.getBlockAt(x, y - 1, z).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x, y - 1, z).getLocation());
             return getProfession(w.getBlockAt(x, y - 1, z).getType());
         }
+        System.out.println("Z empty");
         return Villager.Profession.NONE;
     }
 
@@ -490,19 +529,86 @@ public class VillagerStorage {
     private boolean isOccupied(Location l) {
         boolean[] res = { false };
         this.villagers.values().forEach(villager -> {
-            if ((villager.getProfession() != Villager.Profession.NONE && villager.getProfession() != Villager.Profession.NITWIT) && villager.getMemory(MemoryKey.JOB_SITE) != null && villager.getMemory(MemoryKey.JOB_SITE).getBlock().getType() == l.getBlock().getType())
+            if ((villager.getProfession() != Villager.Profession.NONE && villager.getProfession() != Villager.Profession.NITWIT) && villager.getMemory(MemoryKey.JOB_SITE) != null && villager.getMemory(MemoryKey.JOB_SITE).getBlockX() == l.getBlockX() && villager.getMemory(MemoryKey.JOB_SITE).getBlockY() == l.getBlockY() && villager.getMemory(MemoryKey.JOB_SITE).getBlockZ() == l.getBlockZ())
                 res[0] = true;
         });
         return res[0];
     }
 
     private Villager spawnNerfedVillager(Villager v1) {
+
+        if(v1.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM)
+            return v1;
+
         if (!v1.isValid() || v1.isDead() || !v1.getWorld().isChunkLoaded(v1.getLocation().getBlockX() / 16, v1.getLocation().getBlockZ() / 16))
             return null;
 
         Villager v2 = (Villager)v1.getWorld().spawnEntity(v1.getLocation(), EntityType.VILLAGER, CreatureSpawnEvent.SpawnReason.CUSTOM);
-        v2.setAI(v1.hasAI());
-        v2.setAware(v1.isAware());
+        v2.setAI(false);
+        v2.setAware(false);
+        v2.setAge(v1.getAge());
+        v2.setProfession(v1.getProfession());
+        v2.setRestocksToday(v1.getRestocksToday());
+        v2.setReputations(v1.getReputations());
+        v2.setVillagerExperience(v1.getVillagerExperience());
+        v2.setVillagerLevel(v1.getVillagerLevel());
+        v2.setVillagerType(v1.getVillagerType());
+        v2.setBreed(v1.canBreed());
+        try {
+            v2.setMemory(MemoryKey.JOB_SITE, v1.getMemory(MemoryKey.JOB_SITE));
+        } catch (NullPointerException ignored) {}
+        try {
+            v2.setMemory(MemoryKey.ADMIRING_DISABLED, v1.getMemory(MemoryKey.ADMIRING_DISABLED));
+        } catch (NullPointerException ignored) {}
+        try {
+            v2.setMemory(MemoryKey.ADMIRING_ITEM, v1.getMemory(MemoryKey.ADMIRING_ITEM));
+        } catch (NullPointerException ignored) {}
+        try {
+            v2.setMemory(MemoryKey.ANGRY_AT, v1.getMemory(MemoryKey.ANGRY_AT));
+        } catch (NullPointerException ignored) {}
+        try {
+            v2.setMemory(MemoryKey.GOLEM_DETECTED_RECENTLY, v1.getMemory(MemoryKey.GOLEM_DETECTED_RECENTLY));
+        } catch (NullPointerException ignored) {}
+        try {
+            v2.setMemory(MemoryKey.HOME, v1.getMemory(MemoryKey.HOME));
+        } catch (NullPointerException ignored) {}
+        try {
+            v2.setMemory(MemoryKey.HUNTED_RECENTLY, v1.getMemory(MemoryKey.HUNTED_RECENTLY));
+        } catch (NullPointerException ignored) {}
+        try {
+            v2.setMemory(MemoryKey.LAST_SLEPT, v1.getMemory(MemoryKey.LAST_SLEPT));
+        } catch (NullPointerException ignored) {}
+        try {
+            v2.setMemory(MemoryKey.LAST_WOKEN, v1.getMemory(MemoryKey.LAST_WOKEN));
+        } catch (NullPointerException ignored) {}
+        try {
+            v2.setMemory(MemoryKey.LAST_WORKED_AT_POI, v1.getMemory(MemoryKey.LAST_WORKED_AT_POI));
+        } catch (NullPointerException ignored) {}
+        try {
+            v2.setMemory(MemoryKey.MEETING_POINT, v1.getMemory(MemoryKey.MEETING_POINT));
+        } catch (NullPointerException ignored) {}
+        try {
+            v2.setMemory(MemoryKey.POTENTIAL_JOB_SITE, v1.getMemory(MemoryKey.POTENTIAL_JOB_SITE));
+        } catch (NullPointerException ignored) {}
+        try {
+            v2.setMemory(MemoryKey.UNIVERSAL_ANGER, v1.getMemory(MemoryKey.UNIVERSAL_ANGER));
+        } catch (NullPointerException ignored) {}
+        v2.setRecipes(v1.getRecipes());
+        v1.remove();
+        return v2;
+    }
+
+    private Villager spawnRegularVillager(Villager v1) {
+
+        if(v1.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM)
+            return v1;
+
+        if (!v1.isValid() || v1.isDead() || !v1.getWorld().isChunkLoaded(v1.getLocation().getBlockX() / 16, v1.getLocation().getBlockZ() / 16))
+            return null;
+
+        Villager v2 = (Villager)v1.getWorld().spawnEntity(v1.getLocation(), EntityType.VILLAGER, CreatureSpawnEvent.SpawnReason.NATURAL);
+        v2.setAI(true);
+        v2.setAware(true);
         v2.setAge(v1.getAge());
         v2.setProfession(v1.getProfession());
         v2.setRestocksToday(v1.getRestocksToday());
