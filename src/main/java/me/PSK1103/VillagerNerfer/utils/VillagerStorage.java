@@ -12,6 +12,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.data.type.Bed;
+import org.bukkit.block.data.type.Grindstone;
+import org.bukkit.block.data.type.Lectern;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Villager;
 import org.bukkit.entity.memory.MemoryKey;
@@ -36,6 +40,8 @@ public class VillagerStorage {
 
     private long checkInterval;
 
+    private boolean skipNametaggedVillagers;
+
     private static final EnumSet<Material> TALL_IMPASSABLES = EnumSet.noneOf(Material.class);
 
     private static final EnumSet<Material> SPECIAL_IMPASSABLES = EnumSet.noneOf(Material.class);
@@ -45,6 +51,8 @@ public class VillagerStorage {
     private static final EnumSet<Material> SLABS = EnumSet.noneOf(Material.class);
 
     private static final EnumSet<Material> DOORS = EnumSet.noneOf(Material.class);
+
+    private static final EnumSet<Material> BEDS = EnumSet.noneOf(Material.class);
 
     private static final EnumSet<Material> JOB_BLOCKS = EnumSet.of(Material.BLAST_FURNACE, Material.SMOKER, Material.CARTOGRAPHY_TABLE, Material.BREWING_STAND, Material.COMPOSTER, Material.BARREL, Material.FLETCHING_TABLE, Material.CAULDRON, Material.LECTERN, Material.STONECUTTER, Material.LOOM,
             Material.SMITHING_TABLE, Material.GRINDSTONE);
@@ -61,6 +69,8 @@ public class VillagerStorage {
                 SLABS.add(m);
             if (m.name().contains("_DOOR"))
                 DOORS.add(m);
+            if(m.name().contains("_BED"))
+                BEDS.add(m);
         }
     }
 
@@ -70,9 +80,10 @@ public class VillagerStorage {
         this.restockCycle = new HashMap<>();
         this.restockInitiated = new HashMap<>();
         this.exemptVillagers = new ArrayList<>();
-        this.checkInterval = plugin.getCustomConfig().getLong("check-interval");
-        this.maxDailyRestocks = plugin.getCustomConfig().getInt("max-daily-restocks");
-        this.cyclesTillNextRestock = plugin.getCustomConfig().getInt("cycles-till-next-restock");
+        this.checkInterval = plugin.getCustomConfig().getLong("check-interval",200L);
+        this.maxDailyRestocks = plugin.getCustomConfig().getInt("max-daily-restocks",2);
+        this.cyclesTillNextRestock = plugin.getCustomConfig().getInt("cycles-till-next-restock",1);
+        this.skipNametaggedVillagers = plugin.getCustomConfig().getBoolean("skip-nametagged-villagers",true);
         Bukkit.getScheduler().runTaskTimer(plugin, new FreezeTask(), this.checkInterval, this.checkInterval);
     }
 
@@ -84,9 +95,13 @@ public class VillagerStorage {
                     ids.add(v.getUniqueId().toString());
                     continue;
                 }
+
+
                 if (VillagerStorage.canMove(v.getLocation()) && v.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) {
-                    ids.add(v.getUniqueId().toString());
-                    continue;
+                    if(!v.isSleeping()) {
+                        ids.add(v.getUniqueId().toString());
+                        continue;
+                    }
                 }
                 if(canMove(v.getLocation()) && v.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM) {
                     v.setAI(true);
@@ -97,32 +112,63 @@ public class VillagerStorage {
                     continue;
 
                 if(v.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM) {
+                    if(!(v.getCustomName()!=null && v.getCustomName().length()!=0 && skipNametaggedVillagers))
+                        ids.add(v.getUniqueId().toString());
+                    continue;
+                }
+
+                if(v.getCustomName()!=null && v.getCustomName().length()!=0 && skipNametaggedVillagers)
+                {
                     ids.add(v.getUniqueId().toString());
                     continue;
                 }
-                v.setAI(false);
-                v.setAware(false);
+                else {
+                    v.setAI(false);
+                    v.setAware(false);
+                }
+
+
                 if (v.getLocation().getBlock().isPassable()) {
                     v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY(), 0.0D));
                     if (VillagerStorage.SPECIAL_IMPASSABLES.contains(v.getLocation().add(0.0D, -1.0D, 0.0D).getBlock().getType())) {
-                        v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 0.9D, 0.0D));
+                        v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 0.9375D, 0.0D));
                     } else if (VillagerStorage.TRAPDOORS.contains(v.getLocation().add(0.0D, -1.0D, 0.0D).getBlock().getType())) {
-                        v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 0.8D, 0.0D));
+                        v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 0.875D, 0.0D));
                     } else if (VillagerStorage.SLABS.contains(v.getLocation().add(0.0D, -1.0D, 0.0D).getBlock().getType())) {
                         v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 0.5D, 0.0D));
                     } else if (v.getLocation().add(0.0D, -1.0D, 0.0D).getBlock().isPassable()) {
                         v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 1.0D, 0.0D));
                     }
                 } else if (VillagerStorage.SPECIAL_IMPASSABLES.contains(v.getLocation().getBlock().getType())) {
-                    v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() + 0.1D, 0.0D));
+                    v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() + 0.0625D, 0.0D));
                 } else if (VillagerStorage.TRAPDOORS.contains(v.getLocation().getBlock().getType())) {
-                    v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() + 0.2D, 0.0D));
+                    v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() + 0.125D, 0.0D));
                 } else if (VillagerStorage.SLABS.contains(v.getLocation().getBlock().getType())) {
                     v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() + 0.5D, 0.0D));
                 }
+
+                if(Bukkit.getServer().getWorlds().get(0).getTime() >= 12000L && !v.isSleeping()) {
+                    sleepInBed(v);
+                    continue;
+                }
+                else {
+                    if(Bukkit.getServer().getWorlds().get(0).getTime() <= 12000L && v.isSleeping()) {
+                        try {
+                            v.wakeup();
+                        }
+                        catch (IllegalStateException ignored) {}
+                    }
+                }
+
+                /*if(isZombieNear(v.getLocation())) {
+                    v.setAI(true);
+                    v.setAware(true);
+                }*/
+
                 if (v.getProfession() == Villager.Profession.NONE) {
                     v.setMemory(MemoryKey.JOB_SITE, null);
-                    VillagerStorage.this.setProfession(v);
+                    if(Bukkit.getServer().getWorlds().get(0).getTime() >= 2000L && Bukkit.getServer().getWorlds().get(0).getTime() <= 10000)
+                        VillagerStorage.this.setProfession(v);
                     continue;
                 }
                 if (v.getProfession() != Villager.Profession.NITWIT) {
@@ -134,38 +180,50 @@ public class VillagerStorage {
                         return;
                     }
                     List<MerchantRecipe> recipes = v.getRecipes();
-                    if (Bukkit.getServer().getWorlds().get(0).getTime() <= 2000L && Bukkit.getServer().getWorlds().get(0).getTime() >= 2000L - VillagerStorage.this.checkInterval) {
+                    if (Bukkit.getServer().getWorlds().get(0).getTime() <= 2000L && Bukkit.getServer().getWorlds().get(0).getTime() > 2000L - VillagerStorage.this.checkInterval) {
+                        if(v.isSleeping()) {
+                            try {
+                                v.wakeup();
+                            }
+                            catch (IllegalStateException ignored) {}
+                        }
+
                         boolean[] resetNeeded = { false };
                         recipes.forEach(merchantRecipe -> {
-                            if (merchantRecipe.getUses() > 0) {
+                            if (merchantRecipe.getUses() > 0 && checkForOwnJobBlock(v)) {
                                 merchantRecipe.setUses(0);
                                 resetNeeded[0] = true;
                             }
                         });
-                        if (resetNeeded[0]) {
+                        if (resetNeeded[0] && checkForOwnJobBlock(v)) {
                             v.setRestocksToday(1);
                         } else {
                             v.setRestocksToday(0);
                         }
                         VillagerStorage.this.restockCycle.put(v.getUniqueId().toString(), 1);
+                        continue;
                     }
-                    if (v.getRestocksToday() < VillagerStorage.this.maxDailyRestocks) {
-                        if (v.isTrading()) {
-                            VillagerStorage.this.restockCycle.put(v.getUniqueId().toString(), 1);
-                            return;
+
+                    if(Bukkit.getServer().getWorlds().get(0).getTime() >= 2000L && Bukkit.getServer().getWorlds().get(0).getTime() <= 10000) {
+
+                        if (v.getRestocksToday() < VillagerStorage.this.maxDailyRestocks) {
+                            if (v.isTrading()) {
+                                VillagerStorage.this.restockCycle.put(v.getUniqueId().toString(), 1);
+                                return;
+                            }
+                            if (VillagerStorage.this.restockCycle.get(v.getUniqueId().toString()) == VillagerStorage.this.cyclesTillNextRestock) {
+                                boolean[] restockNeeded = {false};
+                                recipes.forEach(merchantRecipe -> {
+                                    if (merchantRecipe.getUses() > 0 && checkForOwnJobBlock(v)) {
+                                        merchantRecipe.setUses(0);
+                                        restockNeeded[0] = true;
+                                    }
+                                });
+                                if (restockNeeded[0] && checkForOwnJobBlock(v))
+                                    v.setRestocksToday(v.getRestocksToday() + 1);
+                            }
+                            VillagerStorage.this.cycleRestock(v.getUniqueId().toString());
                         }
-                        if (VillagerStorage.this.restockCycle.get(v.getUniqueId().toString()) == VillagerStorage.this.cyclesTillNextRestock) {
-                            boolean[] restockNeeded = { false };
-                            recipes.forEach(merchantRecipe -> {
-                                if (merchantRecipe.getUses() > 0) {
-                                    merchantRecipe.setUses(0);
-                                    restockNeeded[0] = true;
-                                }
-                            });
-                            if (restockNeeded[0])
-                                v.setRestocksToday(v.getRestocksToday() + 1);
-                        }
-                        VillagerStorage.this.cycleRestock(v.getUniqueId().toString());
                     }
                 }
             }
@@ -262,8 +320,14 @@ public class VillagerStorage {
             v2 = spawnRegularVillager(v);
         else if(v.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM && canMove(v.getLocation()))
             v2 = v;
-        else if(v.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM && !canMove(v.getLocation()))
-            v2 = spawnNerfedVillager(v);
+        else if(v.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM && !canMove(v.getLocation())) {
+            if(v.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG && skipNametaggedVillagers ) {
+                v2 = v;
+                System.out.println("Nametagged");
+            }
+            else
+                v2 = spawnNerfedVillager(v);
+        }
 
         if (v2 == null)
             return;
@@ -308,6 +372,16 @@ public class VillagerStorage {
             return 4;
         return 5;
     }
+
+    /*private boolean isZombieNear(Location l) {
+        boolean[] isZombieNear = {false};
+        l.getNearbyEntities(1,1,1).forEach(entity -> {
+            if(entity.getType() == EntityType.ZOMBIE || entity.getType() == EntityType.ZOMBIE_VILLAGER || entity.getType() == EntityType.HUSK || entity.getType() == EntityType.DROWNED) {
+                isZombieNear[0] = true;
+            }
+        });
+        return isZombieNear[0];
+    }*/
 
     private void setProfession(Villager v) {
         Villager.Profession p = Villager.Profession.NONE;
@@ -368,14 +442,12 @@ public class VillagerStorage {
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
         if (isOccupied(w.getBlockAt(x + 1, y, z).getLocation())) {
-            System.out.println("E occupied");
             return Villager.Profession.NONE;
         }
         if (getProfession(w.getBlockAt(x + 1, y, z).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x + 1, y, z).getLocation());
             return getProfession(w.getBlockAt(x + 1, y, z).getType());
         }
-        System.out.println("E empty");
         return Villager.Profession.NONE;
     }
 
@@ -385,14 +457,12 @@ public class VillagerStorage {
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
         if (isOccupied(w.getBlockAt(x - 1, y, z).getLocation())) {
-            System.out.println("W occupied");
             return Villager.Profession.NONE;
         }
         if (getProfession(w.getBlockAt(x - 1, y, z).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x - 1, y, z).getLocation());
             return getProfession(w.getBlockAt(x - 1, y, z).getType());
         }
-        System.out.println("W empty");
         return Villager.Profession.NONE;
     }
 
@@ -402,14 +472,12 @@ public class VillagerStorage {
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
         if (isOccupied(w.getBlockAt(x, y, z + 1).getLocation())) {
-            System.out.println("S occupied");
             return Villager.Profession.NONE;
         }
         if (getProfession(w.getBlockAt(x, y, z + 1).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x, y, z + 1).getLocation());
             return getProfession(w.getBlockAt(x, y, z + 1).getType());
         }
-        System.out.println("S empty");
         return Villager.Profession.NONE;
     }
 
@@ -419,14 +487,12 @@ public class VillagerStorage {
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
         if (isOccupied(w.getBlockAt(x, y, z - 1).getLocation())) {
-            System.out.println("N occupied");
             return Villager.Profession.NONE;
         }
         if (getProfession(w.getBlockAt(x, y, z - 1).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x, y, z - 1).getLocation());
             return getProfession(w.getBlockAt(x, y, z - 1).getType());
         }
-        System.out.println("N empty");
         return Villager.Profession.NONE;
     }
 
@@ -436,30 +502,22 @@ public class VillagerStorage {
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
         if (isOccupied(w.getBlockAt(x, y - 1, z).getLocation())) {
-            System.out.println("Z occupied");
             return Villager.Profession.NONE;
         }
         if (getProfession(w.getBlockAt(x, y - 1, z).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x, y - 1, z).getLocation());
             return getProfession(w.getBlockAt(x, y - 1, z).getType());
         }
-        System.out.println("Z empty");
         return Villager.Profession.NONE;
     }
 
     private boolean checkForOwnJobBlock(Villager v) {
         Material jobBlock = getProfessionBlock(v.getProfession());
-        int x = v.getLocation().getBlockX();
-        int y = v.getLocation().getBlockY();
-        int z = v.getLocation().getBlockZ();
-        World w = v.getWorld();
-        if (jobBlock == w.getBlockAt(x, y - 1, z).getType() || jobBlock == w.getBlockAt(x + 1, y, z).getType() || jobBlock == w.getBlockAt(x + 1, y + 1, z).getType() || jobBlock == w
-                .getBlockAt(x - 1, y, z).getType() || jobBlock == w.getBlockAt(x - 1, y + 1, z).getType() || jobBlock == w.getBlockAt(x, y, z + 1).getType() || jobBlock == w
-                .getBlockAt(x, y + 1, z + 1).getType() || jobBlock == w.getBlockAt(x, y, z - 1).getType() || jobBlock == w.getBlockAt(x, y + 1, z - 1).getType())
-            return true;
-        if (SLABS.contains(w.getBlockAt(x, y, z).getType()) || TRAPDOORS.contains(w.getBlockAt(x, y, z).getType()))
-            return (w.getBlockAt(x, y + 3, z).getType() == jobBlock);
-        return false;
+        if(v.getMemory(MemoryKey.JOB_SITE) == null)
+            return false;
+        else {
+            return  (jobBlock == v.getWorld().getBlockAt(v.getMemory(MemoryKey.JOB_SITE)).getType());
+        }
     }
 
     private Material getProfessionBlock(Villager.Profession p) {
@@ -543,6 +601,9 @@ public class VillagerStorage {
         if (!v1.isValid() || v1.isDead() || !v1.getWorld().isChunkLoaded(v1.getLocation().getBlockX() / 16, v1.getLocation().getBlockZ() / 16))
             return null;
 
+        if(v1.getCustomName()!=null && v1.getCustomName().length()!=0)
+            return v1;
+
         Villager v2 = (Villager)v1.getWorld().spawnEntity(v1.getLocation(), EntityType.VILLAGER, CreatureSpawnEvent.SpawnReason.CUSTOM);
         v2.setAI(false);
         v2.setAware(false);
@@ -600,13 +661,23 @@ public class VillagerStorage {
 
     private Villager spawnRegularVillager(Villager v1) {
 
+        System.out.println("Spawning regular villager");
+
         if(v1.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM)
             return v1;
 
         if (!v1.isValid() || v1.isDead() || !v1.getWorld().isChunkLoaded(v1.getLocation().getBlockX() / 16, v1.getLocation().getBlockZ() / 16))
             return null;
 
-        Villager v2 = (Villager)v1.getWorld().spawnEntity(v1.getLocation(), EntityType.VILLAGER, CreatureSpawnEvent.SpawnReason.NATURAL);
+        Villager v2;
+
+        if(v1.getCustomName()!=null && v1.getCustomName().length()!=0) {
+            v2 = (Villager) v1.getWorld().spawnEntity(v1.getLocation(), EntityType.VILLAGER, CreatureSpawnEvent.SpawnReason.SPAWNER_EGG);
+            v2.setCustomName(v1.getCustomName());
+        }
+        else
+            v2 = (Villager)v1.getWorld().spawnEntity(v1.getLocation(), EntityType.VILLAGER, CreatureSpawnEvent.SpawnReason.NATURAL);
+
         v2.setAI(true);
         v2.setAware(true);
         v2.setAge(v1.getAge());
@@ -617,6 +688,7 @@ public class VillagerStorage {
         v2.setVillagerLevel(v1.getVillagerLevel());
         v2.setVillagerType(v1.getVillagerType());
         v2.setBreed(v1.canBreed());
+
         try {
             v2.setMemory(MemoryKey.JOB_SITE, v1.getMemory(MemoryKey.JOB_SITE));
         } catch (NullPointerException ignored) {}
@@ -657,7 +729,55 @@ public class VillagerStorage {
             v2.setMemory(MemoryKey.UNIVERSAL_ANGER, v1.getMemory(MemoryKey.UNIVERSAL_ANGER));
         } catch (NullPointerException ignored) {}
         v2.setRecipes(v1.getRecipes());
+        try {
+            v1.wakeup();
+        }
+        catch (IllegalStateException ignored) {}
         v1.remove();
         return v2;
+    }
+
+    public void sleepInBed(Villager v) {
+        Location l = v.getLocation();
+        World w = v.getWorld();
+        int x = l.getBlockX();
+        int y = l.getBlockY();
+        int z = l.getBlockZ();
+
+        if(w.getBlockAt(x-1,y,z).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x - 1, y, z).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x-1,y,z).getBlockData()).isOccupied()) {
+            v.sleep(w.getBlockAt(x-1,y,z).getLocation());
+            return;
+        }
+        if(w.getBlockAt(x-1,y,z-1).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x - 1, y, z-1).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x-1,y,z-1).getBlockData()).isOccupied()) {
+            v.sleep(w.getBlockAt(x-1,y,z-1).getLocation());
+            return;
+        }
+        if(w.getBlockAt(x,y,z-1).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x,y,z-1).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x,y,z-1).getBlockData()).isOccupied()) {
+            v.sleep(w.getBlockAt(x,y,z-1).getLocation());
+            return;
+        }
+        if(w.getBlockAt(x+1,y,z-1).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x+1,y,z-1).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x+1,y,z-1).getBlockData()).isOccupied()) {
+            v.sleep(w.getBlockAt(x+1,y,z-1).getLocation());
+            return;
+        }
+        if(w.getBlockAt(x+1,y,z).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x + 1, y, z).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x+1,y,z).getBlockData()).isOccupied()) {
+            v.sleep(w.getBlockAt(x+1,y,z).getLocation());
+            return;
+        }
+        if(w.getBlockAt(x+1,y,z+1).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x+1,y,z+1).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x+1,y,z+1).getBlockData()).isOccupied()) {
+            v.sleep(w.getBlockAt(x+1,y,z+1).getLocation());
+            return;
+        }
+        if(w.getBlockAt(x,y,z+1).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x,y,z+1).getState().getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x,y,z+1).getBlockData()).isOccupied()) {
+            v.sleep(w.getBlockAt(x,y,z+1).getLocation());
+            return;
+        }
+        if(w.getBlockAt(x-1,y,z+1).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x-1,y,z+1).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x-1,y,z+1).getBlockData()).isOccupied()) {
+            v.sleep(w.getBlockAt(x-1,y,z+1).getLocation());
+            return;
+        }
+        if(w.getBlockAt(x,y-1,z).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x,y-1,z).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x,y-1,z).getBlockData()).isOccupied()) {
+            v.sleep(w.getBlockAt(x,y-1,z).getLocation());
+        }
     }
 }

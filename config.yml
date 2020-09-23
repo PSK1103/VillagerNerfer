@@ -6,3 +6,6 @@ max-daily-restocks: 2
 
 #sets the number of cycles till the plugin checks if a villager needs restocking
 cycles-till-next-restock: 1
+
+#set to true if you want to ignore nametagged villagers
+skip-nametagged-villagers: true
