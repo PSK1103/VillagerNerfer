@@ -178,7 +178,8 @@ public class VillagerNerferCommands implements CommandExecutor {
                             final String[] uid = {""};
                             final double[] distance = {14142000};
 
-                            Bukkit.getWorlds().forEach(world ->
+                            Bukkit.getWorlds().forEach(world -> {
+                                if(world.getEnvironment() == player.getWorld().getEnvironment()) {
                                     world.getEntities().forEach(entity -> {
                                         if (entity instanceof Villager) {
                                             Villager villager = (Villager) entity;
@@ -187,7 +188,9 @@ public class VillagerNerferCommands implements CommandExecutor {
                                                 distance[0] = playerLocation.distance(villager.getLocation());
                                             }
                                         }
-                                    }));
+                                    });
+                                }
+                            });
 
                             if (distance[0] < 14142000) {
                                 plugin.getStorage().addVillager(((Villager) Bukkit.getEntity(UUID.fromString(uid[0]))));
@@ -308,15 +311,17 @@ public class VillagerNerferCommands implements CommandExecutor {
                             List<Double> d = new ArrayList<>();
 
                             Bukkit.getWorlds().forEach(world -> {
-                                world.getEntities().forEach(entity -> {
-                                    if(entity instanceof Villager) {
-                                        Villager villager = (Villager) entity;
-                                       int index = Collections.binarySearch(d,player.getLocation().distance(villager.getLocation()));
-                                       if (index < 0) index = ~index;
-                                       d.add(index,player.getLocation().distance(villager.getLocation()));
-                                       u.add(index,villager.getUniqueId().toString());
-                                    }
-                                });
+                                if(player.getWorld().getEnvironment() == world.getEnvironment()) {
+                                    world.getEntities().forEach(entity -> {
+                                        if (entity instanceof Villager) {
+                                            Villager villager = (Villager) entity;
+                                            int index = Collections.binarySearch(d, player.getLocation().distance(villager.getLocation()));
+                                            if (index < 0) index = ~index;
+                                            d.add(index, player.getLocation().distance(villager.getLocation()));
+                                            u.add(index, villager.getUniqueId().toString());
+                                        }
+                                    });
+                                }
                             });
 
                             if(u.size()==0) {
