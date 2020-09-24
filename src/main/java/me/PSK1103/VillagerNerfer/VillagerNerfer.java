@@ -11,6 +11,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.logging.Level;
 
 public class VillagerNerfer extends JavaPlugin {
 
@@ -59,7 +60,11 @@ public class VillagerNerfer extends JavaPlugin {
         } catch (IOException | InvalidConfigurationException e) {
             e.printStackTrace();
         }
+
         return customConfig;
     }
 
+    public void reloadCustomConfig() {
+        storage.reloadCustomConfig();
+    }
 }

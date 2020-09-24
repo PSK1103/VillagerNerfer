@@ -51,6 +51,11 @@ public class VillagerNerferCommands implements CommandExecutor {
                         if (commandSender instanceof Player) {
                             Player player = (Player) commandSender;
 
+                            if(!player.hasPermission("VNerfer.count")) {
+                                player.sendMessage(ChatColor.RED + "You do not have permission to use this command");
+                                return true;
+                            }
+
                             player.sendMessage(ChatColor.YELLOW + "Villager Count:" + (vcount[0] + vcount[1]));
                             player.sendMessage("Active villagers: " + vcount[1]);
                             player.sendMessage("Inactive villagers: " + vcount[0]);
@@ -62,6 +67,12 @@ public class VillagerNerferCommands implements CommandExecutor {
                         return true;
                     case "highlight":
                     case "hl":
+
+                        if(commandSender instanceof Player && !commandSender.hasPermission("VNerfer.highlight")) {
+                            commandSender.sendMessage(ChatColor.RED + "You do not have permission to use this command");
+                            return true;
+                        }
+
                         Bukkit.getScheduler().runTaskLater(plugin, () -> {
                             int [] count = {0};
                             Bukkit.getWorlds().forEach(world ->
@@ -110,6 +121,7 @@ public class VillagerNerferCommands implements CommandExecutor {
                                 });
 
                                 plugin.getStorage().clearStorage();
+                                plugin.reloadCustomConfig();
 
                                 Bukkit.getWorlds().forEach(world ->
                                         world.getEntities().forEach(entity -> {
@@ -120,6 +132,10 @@ public class VillagerNerferCommands implements CommandExecutor {
                                         }));
 
                                 player.sendMessage(ChatColor.LIGHT_PURPLE + "Villager data reloaded!");
+                                return true;
+                            }
+                            else {
+                                player.sendMessage(ChatColor.RED + "You do not have permission to use this command");
                                 return true;
                             }
                         }
@@ -134,6 +150,7 @@ public class VillagerNerferCommands implements CommandExecutor {
                                 }));
 
                         plugin.getStorage().clearStorage();
+                        plugin.reloadCustomConfig();
 
                         Bukkit.getWorlds().forEach(world ->
                                 world.getEntities().forEach(entity -> {
@@ -149,6 +166,11 @@ public class VillagerNerferCommands implements CommandExecutor {
                     case "f":
 
                         if (commandSender instanceof Player) {
+
+                            if(!commandSender.hasPermission("VNerfer.force")) {
+                                commandSender.sendMessage(ChatColor.RED + "You do not have permission to use this command");
+                                return true;
+                            }
 
                             Player player = (Player) commandSender;
                             Location playerLocation = player.getLocation();
@@ -181,6 +203,10 @@ public class VillagerNerferCommands implements CommandExecutor {
 
                         if(commandSender instanceof Player) {
                             Player player = (Player) commandSender;
+                            if(!player.hasPermission("VNerfer.help")) {
+                                player.sendMessage(ChatColor.RED + "You do not have permission to use this command");
+                                return true;
+                            }
                             player.sendMessage(ChatColor.LIGHT_PURPLE + "===============Villager Nerfer v" + plugin.getDescription().getVersion() + "===============");
                             player.sendMessage(ChatColor.GOLD + "/vnerfer count (active/inactive): " + ChatColor.GREEN + "Display number of villagers (active or inactive) being tracked by the plugin");
                             player.sendMessage(ChatColor.GOLD + "/vnerfer  highlight: " + ChatColor.GREEN + "Highlights all nerfed villagers");
@@ -201,6 +227,11 @@ public class VillagerNerferCommands implements CommandExecutor {
                 switch (strings[0]) {
                     case "count":
                     case "c":
+
+                        if(commandSender instanceof Player && !commandSender.hasPermission("VNerfer.count")) {
+                            commandSender.sendMessage(ChatColor.RED + "You do not have permission to use this command");
+                            return true;
+                        }
 
                         int[] vcount = new int[2];
 
@@ -253,6 +284,10 @@ public class VillagerNerferCommands implements CommandExecutor {
                     case "f":
                         if(commandSender instanceof Player) {
                             Player player = (Player) commandSender;
+                            if(!player.hasPermission("VNerfer.force")) {
+                                player.sendMessage(ChatColor.RED + "You do not have permission to use this command");
+                                return true;
+                            }
                             int[] count = {0};
                             try {
                                 count[0] = Integer.parseInt(strings[1]);
@@ -268,19 +303,9 @@ public class VillagerNerferCommands implements CommandExecutor {
                                 return true;
                             }
 
-                            String[] uids = new String[count[0]];
-                            Double[] distances = new Double[count[0]];
-
                             List<String> u = new ArrayList<>();
 
                             List<Double> d = new ArrayList<>();
-
-                            for(int i=0;i<count[0];i++) {
-                                uids[i] = "";
-                                distances[i] = 14142000.0;
-                            }
-
-                            int[] found = {0};
 
                             Bukkit.getWorlds().forEach(world -> {
                                 world.getEntities().forEach(entity -> {

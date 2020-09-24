@@ -133,7 +133,7 @@ public class VillagerStorage {
                     if (VillagerStorage.SPECIAL_IMPASSABLES.contains(v.getLocation().add(0.0D, -1.0D, 0.0D).getBlock().getType())) {
                         v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 0.9375D, 0.0D));
                     } else if (VillagerStorage.TRAPDOORS.contains(v.getLocation().add(0.0D, -1.0D, 0.0D).getBlock().getType())) {
-                        v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 0.875D, 0.0D));
+                        v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 0.8125D, 0.0D));
                     } else if (VillagerStorage.SLABS.contains(v.getLocation().add(0.0D, -1.0D, 0.0D).getBlock().getType())) {
                         v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 0.5D, 0.0D));
                     } else if (v.getLocation().add(0.0D, -1.0D, 0.0D).getBlock().isPassable()) {
@@ -142,7 +142,7 @@ public class VillagerStorage {
                 } else if (VillagerStorage.SPECIAL_IMPASSABLES.contains(v.getLocation().getBlock().getType())) {
                     v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() + 0.0625D, 0.0D));
                 } else if (VillagerStorage.TRAPDOORS.contains(v.getLocation().getBlock().getType())) {
-                    v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() + 0.125D, 0.0D));
+                    v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() + 0.1875D, 0.0D));
                 } else if (VillagerStorage.SLABS.contains(v.getLocation().getBlock().getType())) {
                     v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() + 0.5D, 0.0D));
                 }
@@ -160,10 +160,10 @@ public class VillagerStorage {
                     }
                 }
 
-                /*if(isZombieNear(v.getLocation())) {
+                if(isZombieNear(v.getLocation())) {
                     v.setAI(true);
                     v.setAware(true);
-                }*/
+                }
 
                 if (v.getProfession() == Villager.Profession.NONE) {
                     v.setMemory(MemoryKey.JOB_SITE, null);
@@ -373,15 +373,15 @@ public class VillagerStorage {
         return 5;
     }
 
-    /*private boolean isZombieNear(Location l) {
+    private boolean isZombieNear(Location l) {
         boolean[] isZombieNear = {false};
-        l.getNearbyEntities(1,1,1).forEach(entity -> {
+        l.getNearbyEntities(3,3,3).forEach(entity -> {
             if(entity.getType() == EntityType.ZOMBIE || entity.getType() == EntityType.ZOMBIE_VILLAGER || entity.getType() == EntityType.HUSK || entity.getType() == EntityType.DROWNED) {
                 isZombieNear[0] = true;
             }
         });
         return isZombieNear[0];
-    }*/
+    }
 
     private void setProfession(Villager v) {
         Villager.Profession p = Villager.Profession.NONE;
@@ -601,7 +601,7 @@ public class VillagerStorage {
         if (!v1.isValid() || v1.isDead() || !v1.getWorld().isChunkLoaded(v1.getLocation().getBlockX() / 16, v1.getLocation().getBlockZ() / 16))
             return null;
 
-        if(v1.getCustomName()!=null && v1.getCustomName().length()!=0)
+        if(v1.getCustomName()!=null && v1.getCustomName().length()!=0 && skipNametaggedVillagers)
             return v1;
 
         Villager v2 = (Villager)v1.getWorld().spawnEntity(v1.getLocation(), EntityType.VILLAGER, CreatureSpawnEvent.SpawnReason.CUSTOM);
@@ -615,6 +615,10 @@ public class VillagerStorage {
         v2.setVillagerLevel(v1.getVillagerLevel());
         v2.setVillagerType(v1.getVillagerType());
         v2.setBreed(v1.canBreed());
+        try {
+            v2.setCustomName(v1.getCustomName());
+        }
+        catch (NullPointerException ignored) {}
         try {
             v2.setMemory(MemoryKey.JOB_SITE, v1.getMemory(MemoryKey.JOB_SITE));
         } catch (NullPointerException ignored) {}
@@ -671,7 +675,7 @@ public class VillagerStorage {
 
         Villager v2;
 
-        if(v1.getCustomName()!=null && v1.getCustomName().length()!=0) {
+        if(v1.getCustomName()!=null && v1.getCustomName().length()!=0 && skipNametaggedVillagers) {
             v2 = (Villager) v1.getWorld().spawnEntity(v1.getLocation(), EntityType.VILLAGER, CreatureSpawnEvent.SpawnReason.SPAWNER_EGG);
             v2.setCustomName(v1.getCustomName());
         }
@@ -779,5 +783,14 @@ public class VillagerStorage {
         if(w.getBlockAt(x,y-1,z).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x,y-1,z).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x,y-1,z).getBlockData()).isOccupied()) {
             v.sleep(w.getBlockAt(x,y-1,z).getLocation());
         }
+    }
+
+    public void reloadCustomConfig() {
+        Bukkit.getScheduler().cancelTasks(plugin);
+        this.checkInterval = plugin.getCustomConfig().getLong("check-interval",200L);
+        this.maxDailyRestocks = plugin.getCustomConfig().getInt("max-daily-restocks",2);
+        this.cyclesTillNextRestock = plugin.getCustomConfig().getInt("cycles-till-next-restock",1);
+        this.skipNametaggedVillagers = plugin.getCustomConfig().getBoolean("skip-nametagged-villagers",true);
+        Bukkit.getScheduler().runTaskTimer(plugin,new FreezeTask(),checkInterval,checkInterval);
     }
 }
