@@ -1,46 +1,38 @@
 package me.PSK1103.VillagerNerfer.utils;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import javax.annotation.Nonnull;
+
 import me.PSK1103.VillagerNerfer.VillagerNerfer;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.data.type.Bed;
-import org.bukkit.block.data.type.Grindstone;
-import org.bukkit.block.data.type.Lectern;
-import org.bukkit.entity.EntityType;
+import me.PSK1103.VillagerNerfer.depend.Inms;
+import org.bukkit.*;
 import org.bukkit.entity.Villager;
 import org.bukkit.entity.memory.MemoryKey;
-import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.inventory.MerchantRecipe;
 import org.bukkit.util.Vector;
 
 public class VillagerStorage {
-    private Map<String, Villager> villagers;
+    private final Set<Villager> nerfedVillagers;
 
-    private VillagerNerfer plugin;
+    private final Set<Villager> activeVillagers;
 
-    private Map<String, Integer> restockCycle;
+    private final VillagerNerfer plugin;
 
-    private Map<String, Boolean> restockInitiated;
+    private final Map<String, Integer> restockCycle;
 
-    private List<String> exemptVillagers;
+    private final Map<String, Boolean> restockInitiated;
+
+    private final List<String> exemptVillagers;
+
+    private final Inms nmsDepend;
 
     private int maxDailyRestocks;
-
     private int cyclesTillNextRestock;
-
-    private long checkInterval;
-
+    private long activeCheckInterval;
+    private long inactiveCheckInterval;
     private boolean skipNametaggedVillagers;
+    private boolean showNerfedNametag;
+    private List<String> nerfedNametags;
 
     private static final EnumSet<Material> TALL_IMPASSABLES = EnumSet.noneOf(Material.class);
 
@@ -69,220 +61,158 @@ public class VillagerStorage {
                 SLABS.add(m);
             if (m.name().contains("_DOOR"))
                 DOORS.add(m);
-            if(m.name().contains("_BED"))
+            if (m.name().contains("_BED"))
                 BEDS.add(m);
         }
     }
 
     public VillagerStorage(VillagerNerfer plugin) {
         this.plugin = plugin;
-        this.villagers = new HashMap<>();
+        this.activeVillagers = new HashSet<>();
+        this.nerfedVillagers = new HashSet<>();
         this.restockCycle = new HashMap<>();
         this.restockInitiated = new HashMap<>();
         this.exemptVillagers = new ArrayList<>();
-        this.checkInterval = plugin.getCustomConfig().getLong("check-interval",200L);
-        this.maxDailyRestocks = plugin.getCustomConfig().getInt("max-daily-restocks",2);
-        this.cyclesTillNextRestock = plugin.getCustomConfig().getInt("cycles-till-next-restock",1);
-        this.skipNametaggedVillagers = plugin.getCustomConfig().getBoolean("skip-nametagged-villagers",true);
-        Bukkit.getScheduler().runTaskTimer(plugin, new FreezeTask(), this.checkInterval, this.checkInterval);
+        this.activeCheckInterval = plugin.getCustomConfig().getActiveCheckInterval();
+        this.inactiveCheckInterval = plugin.getCustomConfig().getInactiveCheckInterval();
+        this.maxDailyRestocks = plugin.getCustomConfig().getMaxDailyRestocks();
+        this.cyclesTillNextRestock = plugin.getCustomConfig().getCyclesTillNextInterval();
+        this.skipNametaggedVillagers = plugin.getCustomConfig().skipNameTaggedVillagers();
+        this.showNerfedNametag = plugin.getCustomConfig().showNerfedNametag();
+        this.nerfedNametags = plugin.getCustomConfig().getNerfedNametags();
+        this.nmsDepend = Inms.get(plugin);
+        if(plugin.getCustomConfig().bstatsEnabled())
+            addVillagerMetrics();
+        Bukkit.getScheduler().runTaskTimer(plugin, new NerfedTask(), this.inactiveCheckInterval, this.inactiveCheckInterval);
+        Bukkit.getScheduler().runTaskTimer(plugin, new ActiveTask(), this.activeCheckInterval, this.activeCheckInterval);
     }
 
-    public final class FreezeTask implements Runnable {
+    public final class NerfedTask implements Runnable {
         public void run() {
-            List<String> ids = new ArrayList<>();
-            for (Villager v : VillagerStorage.this.villagers.values()) {
-                if (!v.isValid() || v.isDead() || !v.getWorld().isChunkLoaded(v.getLocation().getBlockX() / 16, v.getLocation().getBlockZ() / 16)) {
-                    ids.add(v.getUniqueId().toString());
-                    continue;
-                }
+            nerfedVillagers.removeIf(v -> villagerCheck(v,true));
+            for (Villager v : nerfedVillagers) {
+                professionTask(v);
+            }
+        }
+    }
 
+    public final class ActiveTask implements Runnable {
+        @Override
+        public void run() {
+            activeVillagers.removeIf(v -> villagerCheck(v, false));
+        }
+    }
 
-                if (VillagerStorage.canMove(v.getLocation()) && v.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) {
-                    if(!v.isSleeping()) {
-                        ids.add(v.getUniqueId().toString());
-                        continue;
-                    }
-                }
-                if(canMove(v.getLocation()) && v.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM) {
-                    v.setAI(true);
-                    v.setAware(true);
-                    continue;
-                }
-                if (VillagerStorage.this.exemptVillagers.contains(v.getUniqueId().toString()))
-                    continue;
-
-                if(v.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM) {
-                    if(!(v.getCustomName()!=null && v.getCustomName().length()!=0 && skipNametaggedVillagers))
-                        ids.add(v.getUniqueId().toString());
-                    continue;
-                }
-
-                if(v.getCustomName()!=null && v.getCustomName().length()!=0 && skipNametaggedVillagers)
-                {
-                    ids.add(v.getUniqueId().toString());
-                    continue;
-                }
-                else {
-                    v.setAI(false);
-                    v.setAware(false);
-                }
-
-
-                if (v.getLocation().getBlock().isPassable()) {
-                    v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY(), 0.0D));
-                    if (VillagerStorage.SPECIAL_IMPASSABLES.contains(v.getLocation().add(0.0D, -1.0D, 0.0D).getBlock().getType())) {
-                        v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 0.9375D, 0.0D));
-                    } else if (VillagerStorage.TRAPDOORS.contains(v.getLocation().add(0.0D, -1.0D, 0.0D).getBlock().getType())) {
-                        v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 0.8125D, 0.0D));
-                    } else if (VillagerStorage.SLABS.contains(v.getLocation().add(0.0D, -1.0D, 0.0D).getBlock().getType())) {
-                        v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 0.5D, 0.0D));
-                    } else if (v.getLocation().add(0.0D, -1.0D, 0.0D).getBlock().isPassable()) {
-                        v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() - 1.0D, 0.0D));
-                    }
-                } else if (VillagerStorage.SPECIAL_IMPASSABLES.contains(v.getLocation().getBlock().getType())) {
-                    v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() + 0.0625D, 0.0D));
-                } else if (VillagerStorage.TRAPDOORS.contains(v.getLocation().getBlock().getType())) {
-                    v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() + 0.1875D, 0.0D));
-                } else if (VillagerStorage.SLABS.contains(v.getLocation().getBlock().getType())) {
-                    v.teleport(v.getLocation().add(0.0D, v.getLocation().getBlockY() - v.getLocation().getY() + 0.5D, 0.0D));
-                }
-
-                if(Bukkit.getServer().getWorlds().get(0).getTime() >= 12000L && !v.isSleeping()) {
-                    sleepInBed(v);
-                    continue;
-                }
-                else {
-                    if(Bukkit.getServer().getWorlds().get(0).getTime() <= 12000L && v.isSleeping()) {
-                        try {
-                            v.wakeup();
-                        }
-                        catch (IllegalStateException ignored) {}
-                    }
-                }
-
-                if(isZombieNear(v.getLocation())) {
-                    v.setAI(true);
-                    v.setAware(true);
-                }
-
-                if (v.getProfession() == Villager.Profession.NONE) {
+    private void professionTask(Villager v) {
+        if (v.getProfession() == Villager.Profession.NONE) {
+            v.setMemory(MemoryKey.JOB_SITE, null);
+            if (Bukkit.getServer().getWorlds().get(0).getTime() >= 2000L && Bukkit.getServer().getWorlds().get(0).getTime() <= 10000L)
+                VillagerStorage.this.setProfession(v);
+            return;
+        }
+        if (v.getProfession() != Villager.Profession.NITWIT) {
+            if (!VillagerStorage.this.checkForOwnJobBlock(v)) {
+                if (v.getVillagerExperience() == 0) {
                     v.setMemory(MemoryKey.JOB_SITE, null);
-                    if(Bukkit.getServer().getWorlds().get(0).getTime() >= 2000L && Bukkit.getServer().getWorlds().get(0).getTime() <= 10000)
-                        VillagerStorage.this.setProfession(v);
-                    continue;
+                    VillagerStorage.this.setProfession(v);
                 }
-                if (v.getProfession() != Villager.Profession.NITWIT) {
-                    if (!VillagerStorage.this.checkForOwnJobBlock(v)) {
-                        if (v.getVillagerExperience() == 0) {
-                            v.setMemory(MemoryKey.JOB_SITE, null);
-                            VillagerStorage.this.setProfession(v);
-                        }
+                return;
+            }
+            List<MerchantRecipe> recipes = v.getRecipes();
+            if (Bukkit.getServer().getWorlds().get(0).getTime() <= 2000L && Bukkit.getServer().getWorlds().get(0).getTime() > 2000L - VillagerStorage.this.inactiveCheckInterval) {
+                if (v.isSleeping())
+                    try {
+                        v.wakeup();
+                    } catch (IllegalStateException ignored) {
+                    }
+                boolean[] resetNeeded = {false};
+                recipes.forEach(merchantRecipe -> {
+                    if (merchantRecipe.getUses() > 0 && VillagerStorage.this.checkForOwnJobBlock(v)) {
+                        merchantRecipe.setUses(0);
+                        resetNeeded[0] = true;
+                    }
+                });
+                if (resetNeeded[0] && VillagerStorage.this.checkForOwnJobBlock(v)) {
+                    v.setRestocksToday(1);
+                } else {
+                    v.setRestocksToday(0);
+                }
+                VillagerStorage.this.restockCycle.put(v.getUniqueId().toString(), 1);
+                return;
+            }
+            if (Bukkit.getServer().getWorlds().get(0).getTime() >= 2000L && Bukkit.getServer().getWorlds().get(0).getTime() <= 10000L)
+                if (v.getRestocksToday() < VillagerStorage.this.maxDailyRestocks) {
+                    if (v.isTrading()) {
+                        VillagerStorage.this.restockCycle.put(v.getUniqueId().toString(), 1);
                         return;
                     }
-                    List<MerchantRecipe> recipes = v.getRecipes();
-                    if (Bukkit.getServer().getWorlds().get(0).getTime() <= 2000L && Bukkit.getServer().getWorlds().get(0).getTime() > 2000L - VillagerStorage.this.checkInterval) {
-                        if(v.isSleeping()) {
-                            try {
-                                v.wakeup();
-                            }
-                            catch (IllegalStateException ignored) {}
-                        }
-
-                        boolean[] resetNeeded = { false };
+                    if (VillagerStorage.this.restockCycle.get(v.getUniqueId().toString()) == VillagerStorage.this.cyclesTillNextRestock) {
+                        boolean[] restockNeeded = {false};
                         recipes.forEach(merchantRecipe -> {
-                            if (merchantRecipe.getUses() > 0 && checkForOwnJobBlock(v)) {
+                            if (merchantRecipe.getUses() > 0 && VillagerStorage.this.checkForOwnJobBlock(v)) {
                                 merchantRecipe.setUses(0);
-                                resetNeeded[0] = true;
+                                restockNeeded[0] = true;
                             }
                         });
-                        if (resetNeeded[0] && checkForOwnJobBlock(v)) {
-                            v.setRestocksToday(1);
-                        } else {
-                            v.setRestocksToday(0);
-                        }
-                        VillagerStorage.this.restockCycle.put(v.getUniqueId().toString(), 1);
-                        continue;
+                        if (restockNeeded[0] && VillagerStorage.this.checkForOwnJobBlock(v))
+                            v.setRestocksToday(v.getRestocksToday() + 1);
                     }
-
-                    if(Bukkit.getServer().getWorlds().get(0).getTime() >= 2000L && Bukkit.getServer().getWorlds().get(0).getTime() <= 10000) {
-
-                        if (v.getRestocksToday() < VillagerStorage.this.maxDailyRestocks) {
-                            if (v.isTrading()) {
-                                VillagerStorage.this.restockCycle.put(v.getUniqueId().toString(), 1);
-                                return;
-                            }
-                            if (VillagerStorage.this.restockCycle.get(v.getUniqueId().toString()) == VillagerStorage.this.cyclesTillNextRestock) {
-                                boolean[] restockNeeded = {false};
-                                recipes.forEach(merchantRecipe -> {
-                                    if (merchantRecipe.getUses() > 0 && checkForOwnJobBlock(v)) {
-                                        merchantRecipe.setUses(0);
-                                        restockNeeded[0] = true;
-                                    }
-                                });
-                                if (restockNeeded[0] && checkForOwnJobBlock(v))
-                                    v.setRestocksToday(v.getRestocksToday() + 1);
-                            }
-                            VillagerStorage.this.cycleRestock(v.getUniqueId().toString());
-                        }
-                    }
+                    VillagerStorage.this.cycleRestock(v.getUniqueId().toString());
                 }
-            }
-            ids.forEach(id -> {
-                Villager v = villagers.get(id);
-                VillagerStorage.this.villagers.remove(id);
-                if(v.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) {
-                    spawnRegularVillager(v);
-                }
-                else {
-                    spawnNerfedVillager(v);
-                }
-            });
         }
     }
 
-    public void showTradeParticleEffects(String uid) {
-        Villager v = this.villagers.get(uid);
-        if (v == null)
-            return;
-        Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
-            v.setAI(true);
+    private boolean villagerCheck (Villager v, boolean nerfed) {
+        if (!v.isValid() || v.isDead() || !v.getWorld().isChunkLoaded(v.getLocation().getBlockX() >> 4, v.getLocation().getBlockZ() >> 4)) {
+            return true;
+        }
+
+
+        if((plugin.getCustomConfig().getCheckingMethod() == 1 && canMove(v.getLocation())) || (plugin.getCustomConfig().getCheckingMethod() == 2 && !standingOnForbiddenBlock(v.getLocation()))) {
+            if(!nerfed)
+                return false;
             v.setAware(true);
-        },1L);
-        Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
-            v.setAI(false);
-            v.setAware(false);
-        },2L);
-    }
-
-    public void checkForLevelUpgrade(String uid) {
-        Villager v = this.villagers.get(uid);
-        if (v == null || this.restockInitiated.get(v.getUniqueId().toString()))
-            return;
-        if (v.getVillagerLevel() < setLevel(v.getVillagerExperience())) {
-            Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
-                v.setAI(true);
-                v.setAware(true);
-                this.exemptVillagers.add(v.getUniqueId().toString());
-                this.restockInitiated.put(v.getUniqueId().toString(), Boolean.TRUE);
-            },1L);
-            Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
-                v.setAI(false);
-                v.setAware(false);
-                this.exemptVillagers.remove(v.getUniqueId().toString());
-                this.restockInitiated.put(v.getUniqueId().toString(), Boolean.FALSE);
-            },60L);
+            nmsDepend.setActive(v);
+            restockCycle.remove(v.getUniqueId().toString());
+            restockInitiated.remove(v.getUniqueId().toString());
+            activeVillagers.add(v);
+            return true;
         }
-    }
-
-    public void disableVillagerAIAfterUpgrade(String uid) {
-        if (!this.villagers.containsKey(uid))
-            return;
-        Villager v = this.villagers.get(uid);
-        v.setAI(false);
+        if(nerfed) {
+            if(v.getCustomName()!= null && !nerfedNametags.contains(v.getCustomName().toLowerCase(Locale.ROOT)) && skipNametaggedVillagers) {
+                v.setAware(true);
+                nmsDepend.setActive(v);
+                restockCycle.remove(v.getUniqueId().toString());
+                restockInitiated.remove(v.getUniqueId().toString());
+                activeVillagers.add(v);
+                return true;
+            }
+            return false;
+        }
+        if(v.getCustomName()!= null && !nerfedNametags.contains(v.getCustomName().toLowerCase(Locale.ROOT)) && skipNametaggedVillagers) {
+            return false;
+        }
         v.setAware(false);
+        if(!showNerfedNametag)
+            v.setCustomName(null);
+
+        nmsDepend.setInactive(v);
+        this.restockCycle.put(v.getUniqueId().toString(), 1);
+        this.restockInitiated.put(v.getUniqueId().toString(), Boolean.FALSE);
+        nerfedVillagers.add(v);
+        return true;
     }
 
-    private static boolean canMove(Location l) {
+    private boolean standingOnForbiddenBlock(Location l) {
+        World w = l.getWorld();
+        int x = l.getBlockX();
+        int y = l.getBlockY();
+        int z = l.getBlockZ();
+
+        return w.getBlockAt(x,y-1,z).getType() == plugin.getCustomConfig().getBottomBlock();
+    }
+
+    private boolean canMove(Location l) {
         World w = l.getWorld();
         int x = l.getBlockX();
         int y = l.getBlockY();
@@ -309,35 +239,12 @@ public class VillagerStorage {
     }
 
     public void addVillager(@Nonnull Villager v) {
-        if (this.villagers.containsKey(v.getUniqueId().toString()))
-            return;
-
-        Villager v2 = null;
-
-        if(v.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM && !canMove(v.getLocation()))
-            v2 = v;
-        else if(v.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM && canMove(v.getLocation()))
-            v2 = spawnRegularVillager(v);
-        else if(v.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM && canMove(v.getLocation()))
-            v2 = v;
-        else if(v.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM && !canMove(v.getLocation())) {
-            if(v.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG && skipNametaggedVillagers ) {
-                v2 = v;
-                System.out.println("Nametagged");
-            }
-            else
-                v2 = spawnNerfedVillager(v);
-        }
-
-        if (v2 == null)
-            return;
-        this.villagers.put(v2.getUniqueId().toString(), v2);
-        this.restockCycle.put(v2.getUniqueId().toString(), 1);
-        this.restockInitiated.put(v2.getUniqueId().toString(), Boolean.FALSE);
+        this.activeVillagers.add(v);
     }
 
     public void removeVillager(@Nonnull Villager v) {
-        this.villagers.remove(v.getUniqueId().toString());
+        this.activeVillagers.remove(v);
+        this.nerfedVillagers.remove(v);
         this.restockCycle.remove(v.getUniqueId().toString());
         this.restockInitiated.remove(v.getUniqueId().toString());
     }
@@ -353,11 +260,12 @@ public class VillagerStorage {
     }
 
     public void clearStorage() {
-        this.villagers.values().forEach(villager -> {
-            villager.setAware(true);
-            villager.setAI(true);
+        this.activeVillagers.clear();
+        this.nerfedVillagers.forEach(v -> {
+            nmsDepend.setActive(v);
+            v.setAware(true);
         });
-        this.villagers.clear();
+        this.nerfedVillagers.clear();
         this.restockCycle.clear();
     }
 
@@ -371,16 +279,6 @@ public class VillagerStorage {
         if (xp < 250)
             return 4;
         return 5;
-    }
-
-    private boolean isZombieNear(Location l) {
-        boolean[] isZombieNear = {false};
-        l.getNearbyEntities(3,3,3).forEach(entity -> {
-            if(entity.getType() == EntityType.ZOMBIE || entity.getType() == EntityType.ZOMBIE_VILLAGER || entity.getType() == EntityType.HUSK || entity.getType() == EntityType.DROWNED) {
-                isZombieNear[0] = true;
-            }
-        });
-        return isZombieNear[0];
     }
 
     private void setProfession(Villager v) {
@@ -441,9 +339,8 @@ public class VillagerStorage {
         int x = v.getLocation().getBlockX();
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
-        if (isOccupied(w.getBlockAt(x + 1, y, z).getLocation())) {
+        if (isOccupied(w.getBlockAt(x + 1, y, z).getLocation()))
             return Villager.Profession.NONE;
-        }
         if (getProfession(w.getBlockAt(x + 1, y, z).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x + 1, y, z).getLocation());
             return getProfession(w.getBlockAt(x + 1, y, z).getType());
@@ -456,9 +353,8 @@ public class VillagerStorage {
         int x = v.getLocation().getBlockX();
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
-        if (isOccupied(w.getBlockAt(x - 1, y, z).getLocation())) {
+        if (isOccupied(w.getBlockAt(x - 1, y, z).getLocation()))
             return Villager.Profession.NONE;
-        }
         if (getProfession(w.getBlockAt(x - 1, y, z).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x - 1, y, z).getLocation());
             return getProfession(w.getBlockAt(x - 1, y, z).getType());
@@ -471,9 +367,8 @@ public class VillagerStorage {
         int x = v.getLocation().getBlockX();
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
-        if (isOccupied(w.getBlockAt(x, y, z + 1).getLocation())) {
+        if (isOccupied(w.getBlockAt(x, y, z + 1).getLocation()))
             return Villager.Profession.NONE;
-        }
         if (getProfession(w.getBlockAt(x, y, z + 1).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x, y, z + 1).getLocation());
             return getProfession(w.getBlockAt(x, y, z + 1).getType());
@@ -486,9 +381,8 @@ public class VillagerStorage {
         int x = v.getLocation().getBlockX();
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
-        if (isOccupied(w.getBlockAt(x, y, z - 1).getLocation())) {
+        if (isOccupied(w.getBlockAt(x, y, z - 1).getLocation()))
             return Villager.Profession.NONE;
-        }
         if (getProfession(w.getBlockAt(x, y, z - 1).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x, y, z - 1).getLocation());
             return getProfession(w.getBlockAt(x, y, z - 1).getType());
@@ -501,9 +395,8 @@ public class VillagerStorage {
         int x = v.getLocation().getBlockX();
         int y = v.getLocation().getBlockY();
         int z = v.getLocation().getBlockZ();
-        if (isOccupied(w.getBlockAt(x, y - 1, z).getLocation())) {
+        if (isOccupied(w.getBlockAt(x, y - 1, z).getLocation()))
             return Villager.Profession.NONE;
-        }
         if (getProfession(w.getBlockAt(x, y - 1, z).getType()) != Villager.Profession.NONE) {
             v.setMemory(MemoryKey.JOB_SITE, w.getBlockAt(x, y - 1, z).getLocation());
             return getProfession(w.getBlockAt(x, y - 1, z).getType());
@@ -513,11 +406,9 @@ public class VillagerStorage {
 
     private boolean checkForOwnJobBlock(Villager v) {
         Material jobBlock = getProfessionBlock(v.getProfession());
-        if(v.getMemory(MemoryKey.JOB_SITE) == null)
+        if (v.getMemory(MemoryKey.JOB_SITE) == null)
             return false;
-        else {
-            return  (jobBlock == v.getWorld().getBlockAt(v.getMemory(MemoryKey.JOB_SITE)).getType());
-        }
+        return (jobBlock == v.getWorld().getBlockAt(v.getMemory(MemoryKey.JOB_SITE)).getType());
     }
 
     private Material getProfessionBlock(Villager.Profession p) {
@@ -586,211 +477,33 @@ public class VillagerStorage {
 
     private boolean isOccupied(Location l) {
         boolean[] res = { false };
-        this.villagers.values().forEach(villager -> {
-            if ((villager.getProfession() != Villager.Profession.NONE && villager.getProfession() != Villager.Profession.NITWIT) && villager.getMemory(MemoryKey.JOB_SITE) != null && villager.getMemory(MemoryKey.JOB_SITE).getBlockX() == l.getBlockX() && villager.getMemory(MemoryKey.JOB_SITE).getBlockY() == l.getBlockY() && villager.getMemory(MemoryKey.JOB_SITE).getBlockZ() == l.getBlockZ())
+        this.activeVillagers.forEach(villager -> {
+            if (villager.getProfession() != Villager.Profession.NONE && villager.getProfession() != Villager.Profession.NITWIT && villager.getMemory(MemoryKey.JOB_SITE) != null && villager.getMemory(MemoryKey.JOB_SITE).getBlockX() == l.getBlockX() && villager.getMemory(MemoryKey.JOB_SITE).getBlockY() == l.getBlockY() && villager.getMemory(MemoryKey.JOB_SITE).getBlockZ() == l.getBlockZ())
+                res[0] = true;
+        });
+        this.nerfedVillagers.forEach(villager -> {
+            if (villager.getProfession() != Villager.Profession.NONE && villager.getProfession() != Villager.Profession.NITWIT && villager.getMemory(MemoryKey.JOB_SITE) != null && villager.getMemory(MemoryKey.JOB_SITE).getBlockX() == l.getBlockX() && villager.getMemory(MemoryKey.JOB_SITE).getBlockY() == l.getBlockY() && villager.getMemory(MemoryKey.JOB_SITE).getBlockZ() == l.getBlockZ())
                 res[0] = true;
         });
         return res[0];
     }
 
-    private Villager spawnNerfedVillager(Villager v1) {
-
-        if(v1.getEntitySpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM)
-            return v1;
-
-        if (!v1.isValid() || v1.isDead() || !v1.getWorld().isChunkLoaded(v1.getLocation().getBlockX() / 16, v1.getLocation().getBlockZ() / 16))
-            return null;
-
-        if(v1.getCustomName()!=null && v1.getCustomName().length()!=0 && skipNametaggedVillagers)
-            return v1;
-
-        Villager v2 = (Villager)v1.getWorld().spawnEntity(v1.getLocation(), EntityType.VILLAGER, CreatureSpawnEvent.SpawnReason.CUSTOM);
-        v2.setAI(false);
-        v2.setAware(false);
-        v2.setAge(v1.getAge());
-        v2.setProfession(v1.getProfession());
-        v2.setRestocksToday(v1.getRestocksToday());
-        v2.setReputations(v1.getReputations());
-        v2.setVillagerExperience(v1.getVillagerExperience());
-        v2.setVillagerLevel(v1.getVillagerLevel());
-        v2.setVillagerType(v1.getVillagerType());
-        v2.setBreed(v1.canBreed());
-        try {
-            v2.setCustomName(v1.getCustomName());
-        }
-        catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.JOB_SITE, v1.getMemory(MemoryKey.JOB_SITE));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.ADMIRING_DISABLED, v1.getMemory(MemoryKey.ADMIRING_DISABLED));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.ADMIRING_ITEM, v1.getMemory(MemoryKey.ADMIRING_ITEM));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.ANGRY_AT, v1.getMemory(MemoryKey.ANGRY_AT));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.GOLEM_DETECTED_RECENTLY, v1.getMemory(MemoryKey.GOLEM_DETECTED_RECENTLY));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.HOME, v1.getMemory(MemoryKey.HOME));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.HUNTED_RECENTLY, v1.getMemory(MemoryKey.HUNTED_RECENTLY));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.LAST_SLEPT, v1.getMemory(MemoryKey.LAST_SLEPT));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.LAST_WOKEN, v1.getMemory(MemoryKey.LAST_WOKEN));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.LAST_WORKED_AT_POI, v1.getMemory(MemoryKey.LAST_WORKED_AT_POI));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.MEETING_POINT, v1.getMemory(MemoryKey.MEETING_POINT));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.POTENTIAL_JOB_SITE, v1.getMemory(MemoryKey.POTENTIAL_JOB_SITE));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.UNIVERSAL_ANGER, v1.getMemory(MemoryKey.UNIVERSAL_ANGER));
-        } catch (NullPointerException ignored) {}
-        v2.setRecipes(v1.getRecipes());
-        v1.remove();
-        return v2;
-    }
-
-    private Villager spawnRegularVillager(Villager v1) {
-
-        System.out.println("Spawning regular villager");
-
-        if(v1.getEntitySpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM)
-            return v1;
-
-        if (!v1.isValid() || v1.isDead() || !v1.getWorld().isChunkLoaded(v1.getLocation().getBlockX() / 16, v1.getLocation().getBlockZ() / 16))
-            return null;
-
-        Villager v2;
-
-        if(v1.getCustomName()!=null && v1.getCustomName().length()!=0 && skipNametaggedVillagers) {
-            v2 = (Villager) v1.getWorld().spawnEntity(v1.getLocation(), EntityType.VILLAGER, CreatureSpawnEvent.SpawnReason.SPAWNER_EGG);
-            v2.setCustomName(v1.getCustomName());
-        }
-        else
-            v2 = (Villager)v1.getWorld().spawnEntity(v1.getLocation(), EntityType.VILLAGER, CreatureSpawnEvent.SpawnReason.NATURAL);
-
-        v2.setAI(true);
-        v2.setAware(true);
-        v2.setAge(v1.getAge());
-        v2.setProfession(v1.getProfession());
-        v2.setRestocksToday(v1.getRestocksToday());
-        v2.setReputations(v1.getReputations());
-        v2.setVillagerExperience(v1.getVillagerExperience());
-        v2.setVillagerLevel(v1.getVillagerLevel());
-        v2.setVillagerType(v1.getVillagerType());
-        v2.setBreed(v1.canBreed());
-
-        try {
-            v2.setMemory(MemoryKey.JOB_SITE, v1.getMemory(MemoryKey.JOB_SITE));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.ADMIRING_DISABLED, v1.getMemory(MemoryKey.ADMIRING_DISABLED));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.ADMIRING_ITEM, v1.getMemory(MemoryKey.ADMIRING_ITEM));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.ANGRY_AT, v1.getMemory(MemoryKey.ANGRY_AT));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.GOLEM_DETECTED_RECENTLY, v1.getMemory(MemoryKey.GOLEM_DETECTED_RECENTLY));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.HOME, v1.getMemory(MemoryKey.HOME));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.HUNTED_RECENTLY, v1.getMemory(MemoryKey.HUNTED_RECENTLY));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.LAST_SLEPT, v1.getMemory(MemoryKey.LAST_SLEPT));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.LAST_WOKEN, v1.getMemory(MemoryKey.LAST_WOKEN));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.LAST_WORKED_AT_POI, v1.getMemory(MemoryKey.LAST_WORKED_AT_POI));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.MEETING_POINT, v1.getMemory(MemoryKey.MEETING_POINT));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.POTENTIAL_JOB_SITE, v1.getMemory(MemoryKey.POTENTIAL_JOB_SITE));
-        } catch (NullPointerException ignored) {}
-        try {
-            v2.setMemory(MemoryKey.UNIVERSAL_ANGER, v1.getMemory(MemoryKey.UNIVERSAL_ANGER));
-        } catch (NullPointerException ignored) {}
-        v2.setRecipes(v1.getRecipes());
-        try {
-            v1.wakeup();
-        }
-        catch (IllegalStateException ignored) {}
-        v1.remove();
-        return v2;
-    }
-
-    public void sleepInBed(Villager v) {
-        Location l = v.getLocation();
-        World w = v.getWorld();
-        int x = l.getBlockX();
-        int y = l.getBlockY();
-        int z = l.getBlockZ();
-
-        if(w.getBlockAt(x-1,y,z).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x - 1, y, z).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x-1,y,z).getBlockData()).isOccupied()) {
-            v.sleep(w.getBlockAt(x-1,y,z).getLocation());
-            return;
-        }
-        if(w.getBlockAt(x-1,y,z-1).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x - 1, y, z-1).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x-1,y,z-1).getBlockData()).isOccupied()) {
-            v.sleep(w.getBlockAt(x-1,y,z-1).getLocation());
-            return;
-        }
-        if(w.getBlockAt(x,y,z-1).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x,y,z-1).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x,y,z-1).getBlockData()).isOccupied()) {
-            v.sleep(w.getBlockAt(x,y,z-1).getLocation());
-            return;
-        }
-        if(w.getBlockAt(x+1,y,z-1).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x+1,y,z-1).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x+1,y,z-1).getBlockData()).isOccupied()) {
-            v.sleep(w.getBlockAt(x+1,y,z-1).getLocation());
-            return;
-        }
-        if(w.getBlockAt(x+1,y,z).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x + 1, y, z).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x+1,y,z).getBlockData()).isOccupied()) {
-            v.sleep(w.getBlockAt(x+1,y,z).getLocation());
-            return;
-        }
-        if(w.getBlockAt(x+1,y,z+1).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x+1,y,z+1).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x+1,y,z+1).getBlockData()).isOccupied()) {
-            v.sleep(w.getBlockAt(x+1,y,z+1).getLocation());
-            return;
-        }
-        if(w.getBlockAt(x,y,z+1).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x,y,z+1).getState().getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x,y,z+1).getBlockData()).isOccupied()) {
-            v.sleep(w.getBlockAt(x,y,z+1).getLocation());
-            return;
-        }
-        if(w.getBlockAt(x-1,y,z+1).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x-1,y,z+1).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x-1,y,z+1).getBlockData()).isOccupied()) {
-            v.sleep(w.getBlockAt(x-1,y,z+1).getLocation());
-            return;
-        }
-        if(w.getBlockAt(x,y-1,z).getBlockData() instanceof Bed && ((Bed) w.getBlockAt(x,y-1,z).getBlockData()).getPart() == Bed.Part.HEAD && !((Bed)w.getBlockAt(x,y-1,z).getBlockData()).isOccupied()) {
-            v.sleep(w.getBlockAt(x,y-1,z).getLocation());
-        }
-    }
-
     public void reloadCustomConfig() {
         Bukkit.getScheduler().cancelTasks(plugin);
-        this.checkInterval = plugin.getCustomConfig().getLong("check-interval",200L);
-        this.maxDailyRestocks = plugin.getCustomConfig().getInt("max-daily-restocks",2);
-        this.cyclesTillNextRestock = plugin.getCustomConfig().getInt("cycles-till-next-restock",1);
-        this.skipNametaggedVillagers = plugin.getCustomConfig().getBoolean("skip-nametagged-villagers",true);
-        Bukkit.getScheduler().runTaskTimer(plugin,new FreezeTask(),checkInterval,checkInterval);
+        this.activeCheckInterval = plugin.getCustomConfig().getActiveCheckInterval();
+        this.inactiveCheckInterval = plugin.getCustomConfig().getInactiveCheckInterval();
+        this.maxDailyRestocks = plugin.getCustomConfig().getMaxDailyRestocks();
+        this.cyclesTillNextRestock = plugin.getCustomConfig().getCyclesTillNextInterval();
+        this.skipNametaggedVillagers = plugin.getCustomConfig().skipNameTaggedVillagers();
+        this.showNerfedNametag = plugin.getCustomConfig().showNerfedNametag();
+        this.nerfedNametags = plugin.getCustomConfig().getNerfedNametags();
+        if(plugin.getCustomConfig().bstatsEnabled())
+            addVillagerMetrics();
+        Bukkit.getScheduler().runTaskTimer(plugin, new NerfedTask(), this.inactiveCheckInterval, this.inactiveCheckInterval);
+        Bukkit.getScheduler().runTaskTimer(plugin, new ActiveTask(), this.activeCheckInterval, this.activeCheckInterval);
+    }
+
+    private void addVillagerMetrics() {
+        plugin.getMetrics().addCustomChart(new Metrics.SingleLineChart("nerfed_villagers", nerfedVillagers::size));
     }
 }

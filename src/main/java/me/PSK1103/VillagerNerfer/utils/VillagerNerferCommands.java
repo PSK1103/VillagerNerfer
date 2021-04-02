@@ -7,6 +7,7 @@ import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.plugin.Plugin;
@@ -225,6 +226,12 @@ public class VillagerNerferCommands implements CommandExecutor {
                         }
 
                         return true;
+
+                    case "config":
+                        if(commandSender instanceof ConsoleCommandSender)
+                            plugin.getSLF4JLogger().info(plugin.getCustomConfig().toString());
+                        return true;
+
                 }
             } else if(strings.length==2) {
                 switch (strings[0]) {
@@ -331,7 +338,7 @@ public class VillagerNerferCommands implements CommandExecutor {
                             for(int i = 0;i < Math.min(count[0],u.size()); i++) {
                                 plugin.getStorage().addVillager((Villager)Bukkit.getEntity(UUID.fromString(u.get(i))));
                             }
-                            player.sendMessage(ChatColor.YELLOW + "Nerfed " + Math.min(count[0],u.size()) + " villagers");
+                            player.sendMessage(ChatColor.YELLOW + "Force added " + Math.min(count[0],u.size()) + " villagers");
                             return true;
 
                         }

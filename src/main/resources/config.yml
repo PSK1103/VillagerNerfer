@@ -1,0 +1,41 @@
+#this is used to verify the config is up to date. do not modify this
+config-version: 1
+
+#sets the number of ticks after which the plugin checks for villager's position
+active-check-interval: 200
+inactive-check-interval: 200
+
+#sets max number of villagers restock in a work day
+max-daily-restocks: 2
+
+#sets the number of cycles till the plugin checks if a villager needs restocking
+cycles-till-next-restock: 1
+
+#set to true if you want to ignore nametagged villagers
+skip-nametagged-villagers: true
+
+#villagers nametagged with these names would be nerfed
+#you should follow the scheme [name] (not a necessity)
+#(relevant only when skip-nametagged-villagers is set to true)
+nerfed-nametags:
+  - "[nerfed]"
+  - "[disabled]"
+
+#stops the [nerfed] nametag from disappearing (relevant only when skip-nametagged-villagers is set to true)
+show-nerfed-nametag: false
+
+#sets the checking method you want to use
+#1 - check if a villager is in a 1x1 with no way to get out
+#2 - check if a villager is standing on a particular block: EMERALD_BLOCK on default
+checking-method: 1
+
+#if checking-method is 2, sets the material of block underneath the villager
+bottom-block: EMERALD_BLOCK
+
+#set to true if you want to use timings to nerf villager
+enable-timings: true
+
+#enables bstats
+#It is recommended that you keep this on so that I can get a rough estimate of how my plugin is performing
+enable-bstats: true
+

@@ -1,0 +1,43 @@
+main: me.PSK1103.VillagerNerfer.VillagerNerfer
+name: VillagerNerfer
+author: PSK1103
+api-version: "1.14"
+version: 1.5.0
+description: Is based loosely on VillagerLobotomizatorNator, improved 1x1 hole detection and configurable trade restock system that closely matches regular trade cycle.
+
+commands:
+
+  VNerfer:
+    description: Reloading the plugin and resetting previous villagers to normal state
+    aliases: [vn,vnerfer]
+    usage: do /vn help for all use cases
+
+permissions:
+  VNerfer.*:
+    description: Gives access to all commands
+    children:
+      VNerfer.count: true
+      VNerfer.highlight: true
+      VNerfer.reload: true
+      VNerfer.force: true
+      VNerfer.help: true
+
+  VNerfer.count:
+    description: Lets the user get a count of all villagers, active or inactive
+    default: op
+
+  VNerfer.highlight:
+    description: Allows the user to highlight nerfed villagers
+    default: op
+
+  VNerfer.reload:
+    description: Allows the user to reload the plugin
+    default: op
+
+  VNerfer.force:
+    description: Allows the user to force check nearby villagers
+    default: op
+
+  VNerfer.help:
+    description: Lets the user get hints on how to use Villager Nerfer commands
+    default: op

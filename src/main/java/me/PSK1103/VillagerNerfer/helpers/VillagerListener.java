@@ -41,26 +41,4 @@ public class VillagerListener implements Listener {
         if(e.getEntity() instanceof Villager)
             plugin.getStorage().removeVillager((Villager)e.getEntity());
     }
-
-    @EventHandler
-    public void onInvClose(@Nonnull InventoryCloseEvent e) {
-        if(e.getInventory().getType().equals(InventoryType.MERCHANT)) {
-            if(e.getInventory().getHolder() instanceof Villager) {
-                Villager v = (Villager) e.getInventory().getHolder();
-                plugin.getStorage().checkForLevelUpgrade(v.getUniqueId().toString());
-            }
-        }
-    }
-
-    @EventHandler
-    public void onInventoryClickItem(@Nonnull InventoryClickEvent e) {
-        if(e.getInventory().getType().equals(InventoryType.MERCHANT)) {
-            MerchantInventory inv = (MerchantInventory) e.getInventory();
-            if(e.getInventory().getHolder() instanceof Villager && e.getRawSlot() == 2 && (e.getClick().isLeftClick() || e.getClick().isShiftClick())) {
-                Villager v = (Villager) e.getInventory().getHolder();
-                plugin.getStorage().showTradeParticleEffects(v.getUniqueId().toString());
-            }
-
-        }
-    }
 }

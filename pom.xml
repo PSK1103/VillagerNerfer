@@ -6,33 +6,20 @@
 
     <groupId>me.PSK1103</groupId>
     <artifactId>VillagerNerfer</artifactId>
-    <version>1.1.0</version>
+    <version>1.5.0</version>
 
     <repositories>
         <repository>
-            <id>aikar</id>
-            <url>http://repo.aikar.co/nexus/content/groups/aikar/</url>
-        </repository>
-        <repository>
             <id>papermc</id>
             <url>https://papermc.io/repo/repository/maven-public/</url>
-        </repository>
-        <repository>
-            <id>spigot-repo</id>
-            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
     </repositories>
 
     <dependencies>
         <dependency>
-            <groupId>co.aikar</groupId>
-            <artifactId>minecraft-timings</artifactId>
-            <version>1.0.4</version>
-        </dependency>
-        <dependency>
             <groupId>com.destroystokyo.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>1.16.3-R0.1-SNAPSHOT</version>
+            <version>1.16.4-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

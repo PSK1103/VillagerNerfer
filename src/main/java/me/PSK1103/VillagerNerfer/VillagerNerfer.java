@@ -12,59 +12,52 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class VillagerNerfer extends JavaPlugin {
 
     private VillagerStorage storage;
-    private File customConfigFile;
-    private FileConfiguration customConfig;
+    private Config config;
+    private Metrics metrics;
+
+    private static final int pluginId = 10893;
 
     @Override
     public void onEnable() {
 
         saveDefaultConfig();
 
+        config = new Config(this);
+
+        if(config.bstatsEnabled())
+            metrics = new Metrics(this, pluginId);
+
         storage = new VillagerStorage(this);
-        getServer().getPluginManager().registerEvents(new VillagerListener(this),this);
+
+        getServer().getPluginManager().registerEvents(new VillagerListener(this), this);
         getCommand("VNerfer").setExecutor(new VillagerNerferCommands(this));
     }
 
     @Override
     public void onDisable() {
-        Bukkit.getWorlds().forEach(world -> {
-            world.getEntities().forEach(e -> {
-                if (e instanceof Villager) {
-                    Villager v = (Villager) e;
-                    v.setAI(true);
-                    v.setAware(true);
-                }
-            });
-        });
-
-        storage.clearStorage();
+        if(storage!=null)
+            storage.clearStorage();
     }
 
     public VillagerStorage getStorage() {
         return storage;
     }
 
-    public FileConfiguration getCustomConfig() {
-
-        customConfigFile = new File(getDataFolder(), "config.yml");
-        if (!customConfigFile.exists()) {
-            return getConfig();
-        }
-        customConfig= new YamlConfiguration();
-        try {
-            customConfig.load(customConfigFile);
-        } catch (IOException | InvalidConfigurationException e) {
-            e.printStackTrace();
-        }
-
-        return customConfig;
+    public void reloadCustomConfig() {
+        config.reloadConfig();
+        storage.reloadCustomConfig();
     }
 
-    public void reloadCustomConfig() {
-        storage.reloadCustomConfig();
+    public Config getCustomConfig() {
+        return config;
+    }
+
+    public Metrics getMetrics(){
+        return metrics;
     }
 }
