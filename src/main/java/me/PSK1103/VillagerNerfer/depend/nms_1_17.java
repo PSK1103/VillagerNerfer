@@ -3,93 +3,75 @@ package me.PSK1103.VillagerNerfer.depend;
 import co.aikar.timings.MinecraftTimings;
 import co.aikar.timings.Timing;
 import com.google.common.collect.ImmutableSet;
+import me.PSK1103.VillagerNerfer.VillagerNerfer;
+
+import net.minecraft.core.IRegistry;
+import net.minecraft.core.RegistryMaterials;
+import net.minecraft.world.entity.EntitySize;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EnumCreatureType;
+import net.minecraft.world.level.block.Block;
+import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
+import org.bukkit.entity.Entity;
+import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.jetbrains.annotations.NotNull;
+
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 
-import me.PSK1103.VillagerNerfer.VillagerNerfer;
-import net.minecraft.server.v1_16_R3.Block;
-import net.minecraft.server.v1_16_R3.Entity;
-import net.minecraft.server.v1_16_R3.EntitySize;
-import net.minecraft.server.v1_16_R3.EntityTypes;
-import net.minecraft.server.v1_16_R3.EnumCreatureType;
-import net.minecraft.server.v1_16_R3.IRegistry;
-import net.minecraft.server.v1_16_R3.RegistryMaterials;
-import org.bukkit.craftbukkit.v1_16_R3.entity.CraftEntity;
-import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.jetbrains.annotations.NotNull;
-
-public class nms_1_16_4 implements Inms {
+public class nms_1_17 implements Inms{
     private final VillagerNerfer plugin;
-
-    private final Field _bf;
-
-    private final Field _bg;
-
-    private final Field _bl;
-
-    private final Field _bi;
-
-    private final Field _bj;
-
-    private final Field _bk;
-
-    private final Field _bh;
-
-    private final Field _br;
-
-    private final Field _bm;
-
-    private final Field _bn;
-
-    private final Field _id;
-
-    private final Field _tickTimer;
-
-    private final Field _inactiveTickTimer;
-
-    private final Field _passengerTickTimer;
-
-    private final Field _passengerInactiveTickTimer;
-
-    private final Field _f;
-
-    private final Field _materials_bg;
-
     private final Map<EntityTypes<?>, Map<String[], EntityTypes<?>>> cache;
-
     private final Map<EntityTypes<?>, EntityTypes<?>> originals;
-
     private boolean enabled;
 
-    public nms_1_16_4(@NotNull VillagerNerfer plugin) throws ReflectiveOperationException {
-        this.cache = new HashMap<>();
-        this.originals = new HashMap<>();
-        this.enabled = true;
+    private final Field _bm;
+    private final Field _bn;
+    private final Field _bo;
+    private final Field _bp;
+    private final Field _bq;
+    private final Field _br;
+    private final Field _bs;
+    private final Field _bt;
+    private final Field _bu;
+    private final Field _by;
+    private final Field _id;
+    private final Field _tickTimer;
+    private final Field _inactiveTickTimer;
+    private final Field _passengerTickTimer;
+    private final Field _passengerInactiveTickTimer;
+    private final Field _ar;
+    private final Field _materials_bw;
+
+    public nms_1_17(VillagerNerfer plugin) throws ReflectiveOperationException{
         this.plugin = plugin;
-        this._bf = EntityTypes.class.getDeclaredField("bf");
-        this._bg = EntityTypes.class.getDeclaredField("bg");
-        this._bl = EntityTypes.class.getDeclaredField("bl");
-        this._bi = EntityTypes.class.getDeclaredField("bi");
-        this._bj = EntityTypes.class.getDeclaredField("bj");
-        this._bk = EntityTypes.class.getDeclaredField("bk");
-        this._bh = EntityTypes.class.getDeclaredField("bh");
-        this._br = EntityTypes.class.getDeclaredField("br");
+        cache = new HashMap<>();
+        originals = new HashMap<>();
+        enabled = true;
         this._bm = EntityTypes.class.getDeclaredField("bm");
         this._bn = EntityTypes.class.getDeclaredField("bn");
+        this._bo = EntityTypes.class.getDeclaredField("bo");
+        this._bp = EntityTypes.class.getDeclaredField("bp");
+        this._bq = EntityTypes.class.getDeclaredField("bq");
+        this._br = EntityTypes.class.getDeclaredField("br");
+        this._bs = EntityTypes.class.getDeclaredField("bs");
+        this._bt = EntityTypes.class.getDeclaredField("bt");
+        this._bu = EntityTypes.class.getDeclaredField("bu");
+        this._by = EntityTypes.class.getDeclaredField("by");
         this._id = EntityTypes.class.getDeclaredField("id");
-        this._bf.setAccessible(true);
-        this._bg.setAccessible(true);
-        this._bl.setAccessible(true);
-        this._bi.setAccessible(true);
-        this._bj.setAccessible(true);
-        this._bk.setAccessible(true);
-        this._bh.setAccessible(true);
-        this._br.setAccessible(true);
         this._bm.setAccessible(true);
         this._bn.setAccessible(true);
+        this._bo.setAccessible(true);
+        this._bp.setAccessible(true);
+        this._bq.setAccessible(true);
+        this._br.setAccessible(true);
+        this._bs.setAccessible(true);
+        this._bt.setAccessible(true);
+        this._bu.setAccessible(true);
+        this._by.setAccessible(true);
         this._id.setAccessible(true);
         this._tickTimer = EntityTypes.class.getField("tickTimer");
         this._inactiveTickTimer = EntityTypes.class.getField("inactiveTickTimer");
@@ -99,23 +81,23 @@ public class nms_1_16_4 implements Inms {
         this._inactiveTickTimer.setAccessible(true);
         this._passengerTickTimer.setAccessible(true);
         this._passengerInactiveTickTimer.setAccessible(true);
-        this._f = Entity.class.getDeclaredField("f");
-        this._f.setAccessible(true);
-        this._materials_bg = RegistryMaterials.class.getDeclaredField("bg");
-        this._materials_bg.setAccessible(true);
+        this._ar = net.minecraft.world.entity.Entity.class.getDeclaredField("ar");
+        this._ar.setAccessible(true);
+        this._materials_bw = RegistryMaterials.class.getDeclaredField("bw");
+        this._materials_bw.setAccessible(true);
         try {
             Field rootField = Field.class.getDeclaredField("root");
             rootField.setAccessible(true);
             Field modifiers = Field.class.getDeclaredField("modifiers");
             modifiers.setAccessible(true);
-            Field root = (Field)rootField.get(this._f);
+            Field root = (Field)rootField.get(this._ar);
             modifiers.setInt(root, modifiers.getInt(root) & 0xFFFFFFEF);
-            modifiers.setInt(this._f, modifiers.getInt(root) & 0xFFFFFFEF);
+            modifiers.setInt(this._ar, modifiers.getInt(root) & 0xFFFFFFEF);
         } catch (Exception exception) {}
     }
 
     @NotNull
-    public <T extends Entity> EntityTypes<?> getType(@NotNull EntityTypes<T> original, @NotNull String[] type) throws ReflectiveOperationException {
+    public <T extends net.minecraft.world.entity.Entity> net.minecraft.world.entity.EntityTypes<?> getType(@NotNull net.minecraft.world.entity.EntityTypes<T> original, @NotNull String[] type) throws ReflectiveOperationException {
         try {
             return this.cache
                     .computeIfAbsent(original, k -> new HashMap<>())
@@ -127,24 +109,24 @@ public class nms_1_16_4 implements Inms {
         }
     }
 
-    public <T extends Entity> void setTimingsHandler(@NotNull Entity entity, @NotNull String[] type) throws ReflectiveOperationException {
-        EntityTypes<T> original = (EntityTypes<T>)this._f.get(entity);
-        EntityTypes<T> modified = (EntityTypes<T>) getType(original, type);
-        this._f.set(entity, modified);
+    public <T extends net.minecraft.world.entity.Entity> void setTimingsHandler(@NotNull net.minecraft.world.entity.Entity entity, @NotNull String[] type) throws ReflectiveOperationException {
+        net.minecraft.world.entity.EntityTypes<T> original = (net.minecraft.world.entity.EntityTypes<T>)this._ar.get(entity);
+        net.minecraft.world.entity.EntityTypes<T> modified = (net.minecraft.world.entity.EntityTypes<T>) getType(original, type);
+        this._ar.set(entity, modified);
     }
 
-    public <T extends Entity> void resetTimingsHandler(@NotNull Entity entity) throws ReflectiveOperationException {
-        EntityTypes<T> modified = (EntityTypes<T>)this._f.get(entity);
-        EntityTypes<T> original = (EntityTypes<T>)this.originals.getOrDefault(modified, modified);
-        this._f.set(entity, original);
+    public <T extends net.minecraft.world.entity.Entity> void resetTimingsHandler(@NotNull net.minecraft.world.entity.Entity entity) throws ReflectiveOperationException {
+        net.minecraft.world.entity.EntityTypes<T> modified = (net.minecraft.world.entity.EntityTypes<T>)this._ar.get(entity);
+        net.minecraft.world.entity.EntityTypes<T> original = (net.minecraft.world.entity.EntityTypes<T>)this.originals.getOrDefault(modified, modified);
+        this._ar.set(entity, original);
     }
 
     @NotNull
-    private <T extends Entity> EntityTypes<T> cloneType(@NotNull EntityTypes<T> original, String[] type) {
+    private <T extends net.minecraft.world.entity.Entity> net.minecraft.world.entity.EntityTypes<T> cloneType(@NotNull net.minecraft.world.entity.EntityTypes<T> original, String[] type) {
         try {
             String id = (String)this._id.get(original);
-            EntityTypeClone<T> clone = new EntityTypeClone<>(original, (EntityTypes.b<T>)this._bf.get(original), (EnumCreatureType)this._bg.get(original), ((Boolean)this._bi.get(original)).booleanValue(), ((Boolean)this._bj.get(original)).booleanValue(), ((Boolean)this._bk.get(original)).booleanValue(), ((Boolean)this._bl.get(original)).booleanValue(), (ImmutableSet<Block>)this._bh.get(original), (EntitySize)this._br.get(original), ((Integer)this._bm.get(original)).intValue(), ((Integer)this._bn.get(original)).intValue(), id);
-            Map ids = (Map)this._materials_bg.get(IRegistry.ENTITY_TYPE);
+            EntityTypeClone<T> clone = new EntityTypeClone<>(original, (net.minecraft.world.entity.EntityTypes.b<T>)this._bm.get(original), (EnumCreatureType) this._bn.get(original), ((Boolean)this._bp.get(original)).booleanValue(), ((Boolean)this._bq.get(original)).booleanValue(), ((Boolean)this._br.get(original)).booleanValue(), ((Boolean)this._bs.get(original)).booleanValue(), (ImmutableSet<Block>)this._bo.get(original), (EntitySize) this._by.get(original), ((Integer)this._bt.get(original)).intValue(), ((Integer)this._bu.get(original)).intValue(), id);
+            Map ids = (Map)this._materials_bw.get(IRegistry.Y);
             ids.put(clone, ids.get(original));
             Timing tickTimer = (type.length > 0 && type[0] != null) ? MinecraftTimings.getEntityTimings(id, type[0]) : original.tickTimer;
             Timing inactiveTickTimer = (type.length > 1 && type[1] != null) ? MinecraftTimings.getEntityTimings(id, type[1]) : original.tickTimer;
@@ -164,7 +146,7 @@ public class nms_1_16_4 implements Inms {
     public void setInactive(@NotNull org.bukkit.entity.Entity entity) {
         if (!this.enabled)
             return;
-        Entity nmsEntity = ((CraftEntity)entity).getHandle();
+        net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity)entity).getHandle();
         try {
             if (this.originals.containsKey(nmsEntity.getEntityType()))
                 return;
@@ -179,7 +161,7 @@ public class nms_1_16_4 implements Inms {
     public void setActive(@NotNull org.bukkit.entity.Entity entity) {
         if (!this.enabled)
             return;
-        Entity nmsEntity = ((CraftEntity)entity).getHandle();
+        net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity)entity).getHandle();
         try {
             if (!this.originals.containsKey(nmsEntity.getEntityType()))
                 return;

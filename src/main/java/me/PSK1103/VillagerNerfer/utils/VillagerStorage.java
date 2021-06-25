@@ -168,7 +168,7 @@ public class VillagerStorage {
         }
 
 
-        if((plugin.getCustomConfig().getCheckingMethod() == 1 && canMove(v.getLocation())) || (plugin.getCustomConfig().getCheckingMethod() == 2 && !standingOnForbiddenBlock(v.getLocation()))) {
+        if(canMove(v.getLocation())) {
             if(!nerfed)
                 return false;
             v.setAware(true);
@@ -203,6 +203,19 @@ public class VillagerStorage {
         return true;
     }
 
+    private boolean canMove(Location l) {
+        int method = plugin.getCustomConfig().getCheckingMethod();
+        switch (method) {
+            case 1:
+                return !in1x1(l);
+            case 2:
+                return !standingOnForbiddenBlock(l);
+            case 3:
+                return !in1x1(l) && !standingOnForbiddenBlock(l);
+        }
+        return true;
+    }
+
     private boolean standingOnForbiddenBlock(Location l) {
         World w = l.getWorld();
         int x = l.getBlockX();
@@ -212,30 +225,30 @@ public class VillagerStorage {
         return w.getBlockAt(x,y-1,z).getType() == plugin.getCustomConfig().getBottomBlock();
     }
 
-    private boolean canMove(Location l) {
+    private boolean in1x1(Location l) {
         World w = l.getWorld();
         int x = l.getBlockX();
         int y = l.getBlockY();
         int z = l.getBlockZ();
         if (w.getBlockAt(x, y, z).isPassable() || w.getBlockAt(x, y, z).isLiquid() || DOORS.contains(w.getBlockAt(x, y, z).getType()) || SPECIAL_IMPASSABLES.contains(w.getBlockAt(x, y, z).getType())) {
             if ((w.getBlockAt(x + 1, y, z).isPassable() && w.getBlockAt(x + 1, y + 1, z).isPassable()) || (w.getBlockAt(x - 1, y, z).isPassable() && w.getBlockAt(x - 1, y + 1, z).isPassable()) || (w.getBlockAt(x, y, z + 1).isPassable() && w.getBlockAt(x, y + 1, z + 1).isPassable()) || (w.getBlockAt(x, y, z - 1).isPassable() && w.getBlockAt(x, y + 1, z - 1).isPassable()))
-                return true;
+                return false;
             if (w.getBlockAt(x, y + 2, z).isPassable()) {
                 if (TALL_IMPASSABLES.contains(w.getBlockAt(x + 1, y, z).getType()) && TALL_IMPASSABLES.contains(w.getBlockAt(x - 1, y, z).getType()) && TALL_IMPASSABLES.contains(w.getBlockAt(x, y, z + 1).getType()) && TALL_IMPASSABLES.contains(w.getBlockAt(x, y, z - 1).getType()))
-                    return false;
-                if ((w.getBlockAt(x + 1, y + 2, z).isPassable() && w.getBlockAt(x + 1, y + 1, z).isPassable()) || (w.getBlockAt(x - 1, y + 2, z).isPassable() && w.getBlockAt(x - 1, y + 1, z).isPassable()) || (w.getBlockAt(x, y + 2, z + 1).isPassable() && w.getBlockAt(x, y + 1, z + 1).isPassable()) || (w.getBlockAt(x, y + 2, z - 1).isPassable() && w.getBlockAt(x, y + 1, z - 1).isPassable()))
                     return true;
+                if ((w.getBlockAt(x + 1, y + 2, z).isPassable() && w.getBlockAt(x + 1, y + 1, z).isPassable()) || (w.getBlockAt(x - 1, y + 2, z).isPassable() && w.getBlockAt(x - 1, y + 1, z).isPassable()) || (w.getBlockAt(x, y + 2, z + 1).isPassable() && w.getBlockAt(x, y + 1, z + 1).isPassable()) || (w.getBlockAt(x, y + 2, z - 1).isPassable() && w.getBlockAt(x, y + 1, z - 1).isPassable()))
+                    return false;
             }
-            return false;
+            return true;
         }
         if (w.getBlockAt(x, y + 2, z).isPassable()) {
             if (TALL_IMPASSABLES.contains(w.getBlockAt(x + 1, y, z).getType()) && TALL_IMPASSABLES.contains(w.getBlockAt(x - 1, y, z).getType()) && TALL_IMPASSABLES.contains(w.getBlockAt(x, y, z + 1).getType()) && TALL_IMPASSABLES.contains(w.getBlockAt(x, y, z - 1).getType()) && !SLABS.contains(w.getBlockAt(x, y, z).getType()))
                 return false;
             if ((w.getBlockAt(x + 1, y + 2, z).isPassable() && w.getBlockAt(x + 1, y + 1, z).isPassable()) || (w.getBlockAt(x - 1, y + 2, z).isPassable() && w.getBlockAt(x - 1, y + 1, z).isPassable()) || (w.getBlockAt(x, y + 2, z + 1).isPassable() && w.getBlockAt(x, y + 1, z + 1).isPassable()) || (w.getBlockAt(x, y + 2, z - 1).isPassable() && w.getBlockAt(x, y + 1, z - 1).isPassable()))
-                return true;
-            return false;
+                return false;
+            return true;
         }
-        return false;
+        return true;
     }
 
     public void addVillager(@Nonnull Villager v) {

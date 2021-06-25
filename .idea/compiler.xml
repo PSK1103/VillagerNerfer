@@ -9,8 +9,8 @@
         <module name="VillagerNerfer" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="VillagerNerfer" target="1.8" />
+    <bytecodeTargetLevel target="16">
+      <module name="VillagerNerfer" target="16" />
     </bytecodeTargetLevel>
   </component>
 </project>

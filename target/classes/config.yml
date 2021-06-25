@@ -27,9 +27,10 @@ show-nerfed-nametag: false
 #sets the checking method you want to use
 #1 - check if a villager is in a 1x1 with no way to get out
 #2 - check if a villager is standing on a particular block: EMERALD_BLOCK on default
+#3 - both checks will be executed
 checking-method: 1
 
-#if checking-method is 2, sets the material of block underneath the villager
+#if checking-method is 2 or 3, sets the material of block underneath the villager
 bottom-block: EMERALD_BLOCK
 
 #set to true if you want to use timings to nerf villager

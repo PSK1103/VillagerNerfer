@@ -1,6 +1,6 @@
 <component name="ArtifactManager">
   <artifact type="jar" name="VillagerNerfer:jar">
-    <output-path>$USER_HOME$/Documents/Paper-436 Server/plugins</output-path>
+    <output-path>$USER_HOME$/Documents/Paper-dev-Server/plugins</output-path>
     <root id="archive" name="VillagerNerfer.jar">
       <element id="directory" name="META-INF">
         <element id="file-copy" path="$PROJECT_DIR$/META-INF/MANIFEST.MF" />

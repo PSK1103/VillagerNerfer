@@ -16,9 +16,9 @@ public interface Inms {
     static Inms get(@NotNull VillagerNerfer plugin) {
         if (plugin.getCustomConfig().timingsEnabled())
             try {
-                return new nms_1_16_4(plugin);
+                return new nms_1_17(plugin);
             } catch (Throwable t) {
-                plugin.getLogger().log(Level.INFO, "Encountered an exception while attempting to use native 1.16.4 NMS interface: " + t);
+                plugin.getLogger().log(Level.INFO, "Encountered an exception while attempting to use native 1.17 NMS interface: " + t);
                 plugin.getLogger().warning("Your server version " + Bukkit.getBukkitVersion() + " is not natively supported. A fallback interface will be used. Performance may be affected, and the Timings integration may not work.");
                 return new nmsFallback(plugin);
             }
