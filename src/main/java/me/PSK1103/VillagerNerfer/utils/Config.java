@@ -19,6 +19,8 @@ import java.util.logging.Logger;
 public class Config
 {
 
+    private boolean disablePlugin = false;
+
     private final VillagerNerfer plugin;
     private final Logger logger;
 
@@ -53,29 +55,34 @@ public class Config
         this.plugin = plugin;
         this.logger = plugin.getLogger();
 
-        checkVersion();
+         if(!checkVersion()) {
+             disablePlugin = true;
+             return;
+         }
 
         if (new File(plugin.getDataFolder(), "config.yml").exists()) loadCustomConfig();
         else loadDefaultConfig();
 
     }
 
-    private void checkVersion() {
+    private boolean checkVersion() {
         final FileConfiguration configFile = new YamlConfiguration();
         final FileConfiguration defaultConfig = new YamlConfiguration();
         try {
             defaultConfig.load(new BufferedReader(new InputStreamReader(this.getClass().getClassLoader().getResourceAsStream("config.yml"))));
             configFile.load(new File(plugin.getDataFolder(), "config.yml"));
             if(configFile.getInt("config-version",-1) == defaultConfig.getInt("config-version"))
-                return;
+                return true;
 
             logger.severe("Config file version mismatch");
             logger.warning("Disabling VNerfer. Save your old config and delete it from the directory");
             plugin.getPluginLoader().disablePlugin(plugin);
+            return false;
 
         }
         catch (IOException | InvalidConfigurationException | ClassCastException e) {
             logger.severe(e.toString());
+            return false;
         }
     }
 
@@ -218,6 +225,10 @@ public class Config
 
     public boolean instantDezombification() {
         return instantDezombification;
+    }
+
+    public boolean disablePlugin() {
+        return disablePlugin;
     }
 
     @Override

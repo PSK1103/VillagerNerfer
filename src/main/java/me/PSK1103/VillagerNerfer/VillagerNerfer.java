@@ -29,6 +29,9 @@ public class VillagerNerfer extends JavaPlugin {
 
         config = new Config(this);
 
+        if (config.disablePlugin())
+            return;
+
         if(config.bstatsEnabled())
             metrics = new Metrics(this, pluginId);
 
