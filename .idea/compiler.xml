@@ -10,7 +10,7 @@
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel target="16">
-      <module name="VillagerNerfer" target="16" />
+      <module name="VillagerNerfer" target="17" />
     </bytecodeTargetLevel>
   </component>
 </project>

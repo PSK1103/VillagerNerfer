@@ -4,16 +4,16 @@ import com.destroystokyo.paper.event.entity.EntityAddToWorldEvent;
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import me.PSK1103.VillagerNerfer.VillagerNerfer;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Villager;
+import org.bukkit.entity.ZombieVillager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.inventory.MerchantInventory;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.potion.PotionEffectType;
 import org.jetbrains.annotations.NotNull;
-
-import javax.annotation.Nonnull;
 
 public class VillagerListener implements Listener {
 
@@ -23,8 +23,7 @@ public class VillagerListener implements Listener {
         this.plugin = plugin;
         Bukkit.getWorlds().forEach(world ->
                 world.getEntities().forEach(entity -> {
-                    if(entity instanceof Villager) {
-                        Villager v = (Villager) entity;
+                    if(entity instanceof Villager v) {
                         plugin.getStorage().addVillager(v);
                     }
                 }));
@@ -37,8 +36,20 @@ public class VillagerListener implements Listener {
     }
 
     @EventHandler
-    public final void onRemove(@Nonnull EntityRemoveFromWorldEvent e) {
+    public final void onRemove(@NotNull EntityRemoveFromWorldEvent e) {
         if(e.getEntity() instanceof Villager)
             plugin.getStorage().removeVillager((Villager)e.getEntity());
     }
+
+    @EventHandler
+    public final void onCureZombieVillager(@NotNull PlayerInteractEntityEvent e) {
+        if(!plugin.getCustomConfig().instantDezombification())
+            return;
+        if(e.getPlayer().getInventory().getItem(e.getHand()).getType() == Material.GOLDEN_APPLE &&
+            e.getRightClicked().getType() == EntityType.ZOMBIE_VILLAGER &&
+                ((LivingEntity) e.getRightClicked()).hasPotionEffect(PotionEffectType.WEAKNESS)) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> ((ZombieVillager)e.getRightClicked()).setConversionTime(1),1);
+        }
+    }
+
 }

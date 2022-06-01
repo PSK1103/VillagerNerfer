@@ -1,5 +1,5 @@
 #this is used to verify the config is up to date. do not modify this
-config-version: 1
+config-version: 2
 
 #sets the number of ticks after which the plugin checks for villager's position
 active-check-interval: 200
@@ -32,6 +32,13 @@ checking-method: 1
 
 #if checking-method is 2 or 3, sets the material of block underneath the villager
 bottom-block: EMERALD_BLOCK
+
+#villager AI will be reenabled if any of the zombie family mobs are present in this range
+danger-radius-xz: 3
+danger-radius-y: 1
+
+#allows instant de-zombification to reduce lag from AI enabled zombie villagers
+instant-dezombification: false
 
 #set to true if you want to use timings to nerf villager
 enable-timings: true

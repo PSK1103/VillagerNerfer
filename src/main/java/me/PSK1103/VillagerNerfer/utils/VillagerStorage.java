@@ -1,15 +1,18 @@
 package me.PSK1103.VillagerNerfer.utils;
 
 import java.util.*;
-import javax.annotation.Nonnull;
 
 import me.PSK1103.VillagerNerfer.VillagerNerfer;
 import me.PSK1103.VillagerNerfer.depend.Inms;
 import org.bukkit.*;
+import org.bukkit.craftbukkit.v1_18_R2.entity.CraftVillager;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Villager;
 import org.bukkit.entity.memory.MemoryKey;
 import org.bukkit.inventory.MerchantRecipe;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
 public class VillagerStorage {
     private final Set<Villager> nerfedVillagers;
@@ -33,6 +36,10 @@ public class VillagerStorage {
     private boolean skipNametaggedVillagers;
     private boolean showNerfedNametag;
     private List<String> nerfedNametags;
+
+    private int dangerRadiusXZ;
+
+    private int dangerRadiusY;
 
     private static final EnumSet<Material> TALL_IMPASSABLES = EnumSet.noneOf(Material.class);
 
@@ -80,6 +87,8 @@ public class VillagerStorage {
         this.skipNametaggedVillagers = plugin.getCustomConfig().skipNameTaggedVillagers();
         this.showNerfedNametag = plugin.getCustomConfig().showNerfedNametag();
         this.nerfedNametags = plugin.getCustomConfig().getNerfedNametags();
+        this.dangerRadiusXZ = plugin.getCustomConfig().getDangerRadiusXZ();
+        this.dangerRadiusY = plugin.getCustomConfig().getDangerRadiusY();
         this.nmsDepend = Inms.get(plugin);
         if(plugin.getCustomConfig().bstatsEnabled())
             addVillagerMetrics();
@@ -118,6 +127,12 @@ public class VillagerStorage {
                 }
                 return;
             }
+
+            int currentLevel = v.getVillagerLevel();
+            int newLevel = setLevel(v.getVillagerExperience());
+            for (int i = 0;i<newLevel-currentLevel;i++)
+                ((CraftVillager)v).getHandle().gh();
+
             List<MerchantRecipe> recipes = v.getRecipes();
             if (Bukkit.getServer().getWorlds().get(0).getTime() <= 2000L && Bukkit.getServer().getWorlds().get(0).getTime() > 2000L - VillagerStorage.this.inactiveCheckInterval) {
                 if (v.isSleeping())
@@ -167,8 +182,7 @@ public class VillagerStorage {
             return true;
         }
 
-
-        if(canMove(v.getLocation())) {
+        if(canMove(v.getLocation()) || !v.getLocation().getNearbyLivingEntities(3, 1, e -> List.of(EntityType.ZOMBIE, EntityType.HUSK, EntityType.ZOMBIE_VILLAGER, EntityType.DROWNED).contains(e.getType())).isEmpty()) {
             if(!nerfed)
                 return false;
             v.setAware(true);
@@ -179,7 +193,7 @@ public class VillagerStorage {
             return true;
         }
         if(nerfed) {
-            if(v.getCustomName()!= null && !nerfedNametags.contains(v.getCustomName().toLowerCase(Locale.ROOT)) && skipNametaggedVillagers) {
+            if(v.customName()!= null && !nerfedNametags.contains(v.getCustomName().toLowerCase(Locale.ROOT)) && skipNametaggedVillagers) {
                 v.setAware(true);
                 nmsDepend.setActive(v);
                 restockCycle.remove(v.getUniqueId().toString());
@@ -189,12 +203,12 @@ public class VillagerStorage {
             }
             return false;
         }
-        if(v.getCustomName()!= null && !nerfedNametags.contains(v.getCustomName().toLowerCase(Locale.ROOT)) && skipNametaggedVillagers) {
+        if(v.customName()!= null && !nerfedNametags.contains(v.getCustomName().toLowerCase(Locale.ROOT)) && skipNametaggedVillagers) {
             return false;
         }
         v.setAware(false);
         if(!showNerfedNametag)
-            v.setCustomName(null);
+            v.customName(null);
 
         nmsDepend.setInactive(v);
         this.restockCycle.put(v.getUniqueId().toString(), 1);
@@ -205,15 +219,12 @@ public class VillagerStorage {
 
     private boolean canMove(Location l) {
         int method = plugin.getCustomConfig().getCheckingMethod();
-        switch (method) {
-            case 1:
-                return !in1x1(l);
-            case 2:
-                return !standingOnForbiddenBlock(l);
-            case 3:
-                return !in1x1(l) && !standingOnForbiddenBlock(l);
-        }
-        return true;
+        return switch (method) {
+            case 1 -> !in1x1(l);
+            case 2 -> !standingOnForbiddenBlock(l);
+            case 3 -> !in1x1(l) && !standingOnForbiddenBlock(l);
+            default -> true;
+        };
     }
 
     private boolean standingOnForbiddenBlock(Location l) {
@@ -236,26 +247,23 @@ public class VillagerStorage {
             if (w.getBlockAt(x, y + 2, z).isPassable()) {
                 if (TALL_IMPASSABLES.contains(w.getBlockAt(x + 1, y, z).getType()) && TALL_IMPASSABLES.contains(w.getBlockAt(x - 1, y, z).getType()) && TALL_IMPASSABLES.contains(w.getBlockAt(x, y, z + 1).getType()) && TALL_IMPASSABLES.contains(w.getBlockAt(x, y, z - 1).getType()))
                     return true;
-                if ((w.getBlockAt(x + 1, y + 2, z).isPassable() && w.getBlockAt(x + 1, y + 1, z).isPassable()) || (w.getBlockAt(x - 1, y + 2, z).isPassable() && w.getBlockAt(x - 1, y + 1, z).isPassable()) || (w.getBlockAt(x, y + 2, z + 1).isPassable() && w.getBlockAt(x, y + 1, z + 1).isPassable()) || (w.getBlockAt(x, y + 2, z - 1).isPassable() && w.getBlockAt(x, y + 1, z - 1).isPassable()))
-                    return false;
+                return (!w.getBlockAt(x + 1, y + 2, z).isPassable() || !w.getBlockAt(x + 1, y + 1, z).isPassable()) && (!w.getBlockAt(x - 1, y + 2, z).isPassable() || !w.getBlockAt(x - 1, y + 1, z).isPassable()) && (!w.getBlockAt(x, y + 2, z + 1).isPassable() || !w.getBlockAt(x, y + 1, z + 1).isPassable()) && (!w.getBlockAt(x, y + 2, z - 1).isPassable() || !w.getBlockAt(x, y + 1, z - 1).isPassable());
             }
             return true;
         }
         if (w.getBlockAt(x, y + 2, z).isPassable()) {
             if (TALL_IMPASSABLES.contains(w.getBlockAt(x + 1, y, z).getType()) && TALL_IMPASSABLES.contains(w.getBlockAt(x - 1, y, z).getType()) && TALL_IMPASSABLES.contains(w.getBlockAt(x, y, z + 1).getType()) && TALL_IMPASSABLES.contains(w.getBlockAt(x, y, z - 1).getType()) && !SLABS.contains(w.getBlockAt(x, y, z).getType()))
                 return false;
-            if ((w.getBlockAt(x + 1, y + 2, z).isPassable() && w.getBlockAt(x + 1, y + 1, z).isPassable()) || (w.getBlockAt(x - 1, y + 2, z).isPassable() && w.getBlockAt(x - 1, y + 1, z).isPassable()) || (w.getBlockAt(x, y + 2, z + 1).isPassable() && w.getBlockAt(x, y + 1, z + 1).isPassable()) || (w.getBlockAt(x, y + 2, z - 1).isPassable() && w.getBlockAt(x, y + 1, z - 1).isPassable()))
-                return false;
-            return true;
+            return (!w.getBlockAt(x + 1, y + 2, z).isPassable() || !w.getBlockAt(x + 1, y + 1, z).isPassable()) && (!w.getBlockAt(x - 1, y + 2, z).isPassable() || !w.getBlockAt(x - 1, y + 1, z).isPassable()) && (!w.getBlockAt(x, y + 2, z + 1).isPassable() || !w.getBlockAt(x, y + 1, z + 1).isPassable()) && (!w.getBlockAt(x, y + 2, z - 1).isPassable() || !w.getBlockAt(x, y + 1, z - 1).isPassable());
         }
         return true;
     }
 
-    public void addVillager(@Nonnull Villager v) {
+    public void addVillager(@NotNull Villager v) {
         this.activeVillagers.add(v);
     }
 
-    public void removeVillager(@Nonnull Villager v) {
+    public void removeVillager(@NotNull Villager v) {
         this.activeVillagers.remove(v);
         this.nerfedVillagers.remove(v);
         this.restockCycle.remove(v.getUniqueId().toString());
@@ -319,30 +327,22 @@ public class VillagerStorage {
         for (int i = 0; i < priorityOrder.length(); i++)
             prNo += priorityOrder.get(i) ? (1 << i) : 0;
         switch (prNo) {
-            case 0:
-                p = (checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : ((checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : ((checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : ((checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : checkZ(v))));
-                break;
-            case 1:
-                p = (checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : ((checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : ((checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : ((checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : checkZ(v))));
-                break;
-            case 2:
-                p = (checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : ((checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : ((checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : ((checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : checkZ(v))));
-                break;
-            case 3:
-                p = (checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : ((checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : ((checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : ((checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : checkZ(v))));
-                break;
-            case 4:
-                p = (checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : ((checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : ((checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : ((checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : checkZ(v))));
-                break;
-            case 5:
-                p = (checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : ((checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : ((checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : ((checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : checkZ(v))));
-                break;
-            case 6:
-                p = (checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : ((checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : ((checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : ((checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : checkZ(v))));
-                break;
-            case 7:
-                p = (checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : ((checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : ((checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : ((checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : checkZ(v))));
-                break;
+            case 0 ->
+                    p = (checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : ((checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : ((checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : ((checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : checkZ(v))));
+            case 1 ->
+                    p = (checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : ((checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : ((checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : ((checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : checkZ(v))));
+            case 2 ->
+                    p = (checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : ((checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : ((checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : ((checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : checkZ(v))));
+            case 3 ->
+                    p = (checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : ((checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : ((checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : ((checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : checkZ(v))));
+            case 4 ->
+                    p = (checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : ((checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : ((checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : ((checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : checkZ(v))));
+            case 5 ->
+                    p = (checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : ((checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : ((checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : ((checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : checkZ(v))));
+            case 6 ->
+                    p = (checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : ((checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : ((checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : ((checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : checkZ(v))));
+            case 7 ->
+                    p = (checkNorth(v) != Villager.Profession.NONE) ? checkNorth(v) : ((checkWest(v) != Villager.Profession.NONE) ? checkWest(v) : ((checkEast(v) != Villager.Profession.NONE) ? checkEast(v) : ((checkSouth(v) != Villager.Profession.NONE) ? checkSouth(v) : checkZ(v))));
         }
         v.setProfession(p);
     }
@@ -425,67 +425,41 @@ public class VillagerStorage {
     }
 
     private Material getProfessionBlock(Villager.Profession p) {
-        switch (p.getKey().getKey()) {
-            case "armorer":
-                return Material.BLAST_FURNACE;
-            case "butcher":
-                return Material.SMOKER;
-            case "cartographer":
-                return Material.CARTOGRAPHY_TABLE;
-            case "cleric":
-                return Material.BREWING_STAND;
-            case "farmer":
-                return Material.COMPOSTER;
-            case "fisherman":
-                return Material.BARREL;
-            case "fletcher":
-                return Material.FLETCHING_TABLE;
-            case "leatherworker":
-                return Material.CAULDRON;
-            case "librarian":
-                return Material.LECTERN;
-            case "mason":
-                return Material.STONECUTTER;
-            case "shepherd":
-                return Material.LOOM;
-            case "toolsmith":
-                return Material.SMITHING_TABLE;
-            case "weaponsmith":
-                return Material.GRINDSTONE;
-        }
-        return null;
+        return switch (p.getKey().getKey()) {
+            case "armorer" -> Material.BLAST_FURNACE;
+            case "butcher" -> Material.SMOKER;
+            case "cartographer" -> Material.CARTOGRAPHY_TABLE;
+            case "cleric" -> Material.BREWING_STAND;
+            case "farmer" -> Material.COMPOSTER;
+            case "fisherman" -> Material.BARREL;
+            case "fletcher" -> Material.FLETCHING_TABLE;
+            case "leatherworker" -> Material.CAULDRON;
+            case "librarian" -> Material.LECTERN;
+            case "mason" -> Material.STONECUTTER;
+            case "shepherd" -> Material.LOOM;
+            case "toolsmith" -> Material.SMITHING_TABLE;
+            case "weaponsmith" -> Material.GRINDSTONE;
+            default -> null;
+        };
     }
 
     private Villager.Profession getProfession(Material m) {
-        switch (m.getKey().getKey()) {
-            case "blast_furnace":
-                return Villager.Profession.ARMORER;
-            case "smoker":
-                return Villager.Profession.BUTCHER;
-            case "cartography_table":
-                return Villager.Profession.CARTOGRAPHER;
-            case "brewing_stand":
-                return Villager.Profession.CLERIC;
-            case "composter":
-                return Villager.Profession.FARMER;
-            case "barrel":
-                return Villager.Profession.FISHERMAN;
-            case "fletching_table":
-                return Villager.Profession.FLETCHER;
-            case "cauldron":
-                return Villager.Profession.LEATHERWORKER;
-            case "lectern":
-                return Villager.Profession.LIBRARIAN;
-            case "stonecutter":
-                return Villager.Profession.MASON;
-            case "loom":
-                return Villager.Profession.SHEPHERD;
-            case "smithing_table":
-                return Villager.Profession.TOOLSMITH;
-            case "grindstone":
-                return Villager.Profession.WEAPONSMITH;
-        }
-        return Villager.Profession.NONE;
+        return switch (m.getKey().getKey()) {
+            case "blast_furnace" -> Villager.Profession.ARMORER;
+            case "smoker" -> Villager.Profession.BUTCHER;
+            case "cartography_table" -> Villager.Profession.CARTOGRAPHER;
+            case "brewing_stand" -> Villager.Profession.CLERIC;
+            case "composter" -> Villager.Profession.FARMER;
+            case "barrel" -> Villager.Profession.FISHERMAN;
+            case "fletching_table" -> Villager.Profession.FLETCHER;
+            case "cauldron" -> Villager.Profession.LEATHERWORKER;
+            case "lectern" -> Villager.Profession.LIBRARIAN;
+            case "stonecutter" -> Villager.Profession.MASON;
+            case "loom" -> Villager.Profession.SHEPHERD;
+            case "smithing_table" -> Villager.Profession.TOOLSMITH;
+            case "grindstone" -> Villager.Profession.WEAPONSMITH;
+            default -> Villager.Profession.NONE;
+        };
     }
 
     private boolean isOccupied(Location l) {
@@ -510,6 +484,8 @@ public class VillagerStorage {
         this.skipNametaggedVillagers = plugin.getCustomConfig().skipNameTaggedVillagers();
         this.showNerfedNametag = plugin.getCustomConfig().showNerfedNametag();
         this.nerfedNametags = plugin.getCustomConfig().getNerfedNametags();
+        this.dangerRadiusXZ = plugin.getCustomConfig().getDangerRadiusXZ();
+        this.dangerRadiusY = plugin.getCustomConfig().getDangerRadiusY();
         if(plugin.getCustomConfig().bstatsEnabled())
             addVillagerMetrics();
         Bukkit.getScheduler().runTaskTimer(plugin, new NerfedTask(), this.inactiveCheckInterval, this.inactiveCheckInterval);

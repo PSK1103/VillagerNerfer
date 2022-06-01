@@ -11,13 +11,13 @@ import net.minecraft.world.entity.EntitySize;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EnumCreatureType;
 import net.minecraft.world.level.block.Block;
-import org.bukkit.craftbukkit.v1_17_R1.entity.CraftEntity;
-import org.bukkit.entity.Entity;
+import org.bukkit.craftbukkit.v1_18_R2.entity.CraftEntity;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
@@ -28,7 +28,6 @@ public class nms_1_17 implements Inms{
     private final Map<EntityTypes<?>, EntityTypes<?>> originals;
     private boolean enabled;
 
-    private final Field _bm;
     private final Field _bn;
     private final Field _bo;
     private final Field _bp;
@@ -37,21 +36,21 @@ public class nms_1_17 implements Inms{
     private final Field _bs;
     private final Field _bt;
     private final Field _bu;
-    private final Field _by;
+    private final Field _bv;
+    private final Field _bz;
     private final Field _id;
     private final Field _tickTimer;
     private final Field _inactiveTickTimer;
     private final Field _passengerTickTimer;
     private final Field _passengerInactiveTickTimer;
-    private final Field _ar;
-    private final Field _materials_bw;
+    private final Field _as;
+    private final Field _materials_bE;
 
     public nms_1_17(VillagerNerfer plugin) throws ReflectiveOperationException{
         this.plugin = plugin;
         cache = new HashMap<>();
         originals = new HashMap<>();
         enabled = true;
-        this._bm = EntityTypes.class.getDeclaredField("bm");
         this._bn = EntityTypes.class.getDeclaredField("bn");
         this._bo = EntityTypes.class.getDeclaredField("bo");
         this._bp = EntityTypes.class.getDeclaredField("bp");
@@ -60,9 +59,9 @@ public class nms_1_17 implements Inms{
         this._bs = EntityTypes.class.getDeclaredField("bs");
         this._bt = EntityTypes.class.getDeclaredField("bt");
         this._bu = EntityTypes.class.getDeclaredField("bu");
-        this._by = EntityTypes.class.getDeclaredField("by");
+        this._bv = EntityTypes.class.getDeclaredField("bv");
+        this._bz = EntityTypes.class.getDeclaredField("bz");
         this._id = EntityTypes.class.getDeclaredField("id");
-        this._bm.setAccessible(true);
         this._bn.setAccessible(true);
         this._bo.setAccessible(true);
         this._bp.setAccessible(true);
@@ -71,7 +70,8 @@ public class nms_1_17 implements Inms{
         this._bs.setAccessible(true);
         this._bt.setAccessible(true);
         this._bu.setAccessible(true);
-        this._by.setAccessible(true);
+        this._bv.setAccessible(true);
+        this._bz.setAccessible(true);
         this._id.setAccessible(true);
         this._tickTimer = EntityTypes.class.getField("tickTimer");
         this._inactiveTickTimer = EntityTypes.class.getField("inactiveTickTimer");
@@ -81,19 +81,20 @@ public class nms_1_17 implements Inms{
         this._inactiveTickTimer.setAccessible(true);
         this._passengerTickTimer.setAccessible(true);
         this._passengerInactiveTickTimer.setAccessible(true);
-        this._ar = net.minecraft.world.entity.Entity.class.getDeclaredField("ar");
-        this._ar.setAccessible(true);
-        this._materials_bw = RegistryMaterials.class.getDeclaredField("bw");
-        this._materials_bw.setAccessible(true);
+        this._as = net.minecraft.world.entity.Entity.class.getDeclaredField("as");
+        this._as.setAccessible(true);
+        this._materials_bE = RegistryMaterials.class.getDeclaredField("bE");
+        this._materials_bE.setAccessible(true);
         try {
             Field rootField = Field.class.getDeclaredField("root");
             rootField.setAccessible(true);
             Field modifiers = Field.class.getDeclaredField("modifiers");
             modifiers.setAccessible(true);
-            Field root = (Field)rootField.get(this._ar);
+            Field root = (Field)rootField.get(this._as);
             modifiers.setInt(root, modifiers.getInt(root) & 0xFFFFFFEF);
-            modifiers.setInt(this._ar, modifiers.getInt(root) & 0xFFFFFFEF);
-        } catch (Exception exception) {}
+            modifiers.setInt(this._as, modifiers.getInt(root) & 0xFFFFFFEF);
+        } catch (Exception ignored) {}
+        unfreezeRegistry();
     }
 
     @NotNull
@@ -110,23 +111,25 @@ public class nms_1_17 implements Inms{
     }
 
     public <T extends net.minecraft.world.entity.Entity> void setTimingsHandler(@NotNull net.minecraft.world.entity.Entity entity, @NotNull String[] type) throws ReflectiveOperationException {
-        net.minecraft.world.entity.EntityTypes<T> original = (net.minecraft.world.entity.EntityTypes<T>)this._ar.get(entity);
+        net.minecraft.world.entity.EntityTypes<T> original = (net.minecraft.world.entity.EntityTypes<T>)this._as.get(entity);
+        plugin.getLogger().info("B - orig type " + original.id);
         net.minecraft.world.entity.EntityTypes<T> modified = (net.minecraft.world.entity.EntityTypes<T>) getType(original, type);
-        this._ar.set(entity, modified);
+        plugin.getLogger().info("C - mod type " + modified.id);
+        this._as.set(entity, modified);
     }
 
     public <T extends net.minecraft.world.entity.Entity> void resetTimingsHandler(@NotNull net.minecraft.world.entity.Entity entity) throws ReflectiveOperationException {
-        net.minecraft.world.entity.EntityTypes<T> modified = (net.minecraft.world.entity.EntityTypes<T>)this._ar.get(entity);
+        net.minecraft.world.entity.EntityTypes<T> modified = (net.minecraft.world.entity.EntityTypes<T>)this._as.get(entity);
         net.minecraft.world.entity.EntityTypes<T> original = (net.minecraft.world.entity.EntityTypes<T>)this.originals.getOrDefault(modified, modified);
-        this._ar.set(entity, original);
+        this._as.set(entity, original);
     }
 
     @NotNull
     private <T extends net.minecraft.world.entity.Entity> net.minecraft.world.entity.EntityTypes<T> cloneType(@NotNull net.minecraft.world.entity.EntityTypes<T> original, String[] type) {
         try {
             String id = (String)this._id.get(original);
-            EntityTypeClone<T> clone = new EntityTypeClone<>(original, (net.minecraft.world.entity.EntityTypes.b<T>)this._bm.get(original), (EnumCreatureType) this._bn.get(original), ((Boolean)this._bp.get(original)).booleanValue(), ((Boolean)this._bq.get(original)).booleanValue(), ((Boolean)this._br.get(original)).booleanValue(), ((Boolean)this._bs.get(original)).booleanValue(), (ImmutableSet<Block>)this._bo.get(original), (EntitySize) this._by.get(original), ((Integer)this._bt.get(original)).intValue(), ((Integer)this._bu.get(original)).intValue(), id);
-            Map ids = (Map)this._materials_bw.get(IRegistry.Y);
+            EntityTypeClone<T> clone = new EntityTypeClone<>(original, (net.minecraft.world.entity.EntityTypes.b<T>)this._bn.get(original), (EnumCreatureType) this._bo.get(original), ((Boolean)this._bq.get(original)).booleanValue(), ((Boolean)this._br.get(original)).booleanValue(), ((Boolean)this._bs.get(original)).booleanValue(), ((Boolean)this._bt.get(original)).booleanValue(), (ImmutableSet<Block>)this._bp.get(original), (EntitySize) this._bz.get(original), ((Integer)this._bu.get(original)).intValue(), ((Integer)this._bv.get(original)).intValue(), id);
+            Map ids = (Map)this._materials_bE.get(IRegistry.W);
             ids.put(clone, ids.get(original));
             Timing tickTimer = (type.length > 0 && type[0] != null) ? MinecraftTimings.getEntityTimings(id, type[0]) : original.tickTimer;
             Timing inactiveTickTimer = (type.length > 1 && type[1] != null) ? MinecraftTimings.getEntityTimings(id, type[1]) : original.tickTimer;
@@ -138,6 +141,7 @@ public class nms_1_17 implements Inms{
             this._passengerInactiveTickTimer.set(clone, passengerInactiveTickTimer);
             this.originals.put(clone, original);
             return clone;
+
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
@@ -148,9 +152,10 @@ public class nms_1_17 implements Inms{
             return;
         net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity)entity).getHandle();
         try {
-            if (this.originals.containsKey(nmsEntity.getEntityType()))
+            if (this.originals.containsKey(nmsEntity.ad()))
                 return;
             nmsEntity.spawnReason = CreatureSpawnEvent.SpawnReason.CUSTOM;
+            plugin.getLogger().info("A - type " + EntityTypes.a(nmsEntity.ad()).a());
             setTimingsHandler(nmsEntity, new String[] { "tick (Lobotomized)", "inactiveTick (Lobotomized)", "passengerTick (Lobotomized)", "passengerInactiveTick (Lobotomized)" });
         } catch (Throwable e) {
             this.enabled = false;
@@ -163,7 +168,7 @@ public class nms_1_17 implements Inms{
             return;
         net.minecraft.world.entity.Entity nmsEntity = ((CraftEntity)entity).getHandle();
         try {
-            if (!this.originals.containsKey(nmsEntity.getEntityType()))
+            if (!this.originals.containsKey(nmsEntity.ad()))
                 return;
             nmsEntity.spawnReason = CreatureSpawnEvent.SpawnReason.BREEDING;
             resetTimingsHandler(nmsEntity);
@@ -176,5 +181,34 @@ public class nms_1_17 implements Inms{
     @NotNull
     private static String hash(@NotNull Object o) {
         return Integer.toHexString(Objects.hashCode(o));
+    }
+
+    private static void unfreezeRegistry() {
+        /* As of 1.18.2, registries are frozen once NMS is done adding to them,
+           so we have to do some super hacky things to add custom entities now.
+           Basically, when the registry is frozen, the "frozen" field is set to prevent new entries,
+           and a map "intrusiveHolderCache" is set to null (don't really know what it does.)
+           If frozen is true or "intrusiveHolderCache" is null, it will refuse to add entries,
+           so we just have to fix both of those things and it'll let us add entries again.
+           The registry being frozen may be vital to how the registry works (idk), so it is refrozen after adding our entries.
+
+           Partial stack trace produced when trying to add entities when the registry is frozen:
+           [Server thread/ERROR]: Registry is already frozen initializing UltraCosmetics v2.6.1-DEV-b5 (Is it up to date?)
+            java.lang.IllegalStateException: Registry is already frozen
+                    at net.minecraft.core.RegistryMaterials.e(SourceFile:343) ~[spigot-1.18.2-R0.1-SNAPSHOT.jar:3445-Spigot-fb0dd5f-05a38da]
+                    at net.minecraft.world.entity.EntityTypes.<init>(EntityTypes.java:300) ~[spigot-1.18.2-R0.1-SNAPSHOT.jar:3445-Spigot-fb0dd5f-05a38da]
+                    at net.minecraft.world.entity.EntityTypes$Builder.a(EntityTypes.java:669) ~[spigot-1.18.2-R0.1-SNAPSHOT.jar:3445-Spigot-fb0dd5f-05a38da]
+                    at be.isach.ultracosmetics.v1_18_R2.customentities.CustomEntities.registerEntity(CustomEntities.java:78) ~[?:?]
+        */
+        try {
+            Field intrusiveHolderCache = RegistryMaterials.class.getDeclaredField("bN");
+            intrusiveHolderCache.setAccessible(true);
+            intrusiveHolderCache.set(IRegistry.W, new IdentityHashMap<>());
+            Field frozen = RegistryMaterials.class.getDeclaredField("bL");
+            frozen.setAccessible(true);
+            frozen.set(IRegistry.W, false);
+        } catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
+            e.printStackTrace();
+        }
     }
 }

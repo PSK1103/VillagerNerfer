@@ -10,20 +10,23 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
-import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 public class VillagerNerferCommands implements CommandExecutor {
 
-    private VillagerNerfer plugin;
+    private final VillagerNerfer plugin;
+    
+    private final Logger logger;
 
     public VillagerNerferCommands(VillagerNerfer plugin) {
         this.plugin = plugin;
+        this.logger = plugin.getLogger();
     }
 
     @Override
@@ -39,8 +42,7 @@ public class VillagerNerferCommands implements CommandExecutor {
 
                         Bukkit.getWorlds().forEach(world ->
                                 world.getEntities().forEach(entity -> {
-                                    if (entity instanceof Villager) {
-                                        Villager v = (Villager) entity;
+                                    if (entity instanceof Villager v) {
                                         if (v.isAware()) {
                                             vcount[1]++;
                                         } else {
@@ -49,8 +51,7 @@ public class VillagerNerferCommands implements CommandExecutor {
                                     }
                                 }));
 
-                        if (commandSender instanceof Player) {
-                            Player player = (Player) commandSender;
+                        if (commandSender instanceof Player player) {
 
                             if(!player.hasPermission("VNerfer.count")) {
                                 player.sendMessage(ChatColor.RED + "You do not have permission to use this command");
@@ -62,9 +63,9 @@ public class VillagerNerferCommands implements CommandExecutor {
                             player.sendMessage("Inactive villagers: " + vcount[0]);
                             return true;
                         }
-                        System.out.println("Villager Count:" + (vcount[0] + vcount[1]));
-                        System.out.println("Active villagers: " + vcount[1]);
-                        System.out.println("Inactive villagers: " + vcount[0]);
+                        logger.info("Villager Count:" + (vcount[0] + vcount[1]));
+                        logger.info("Active villagers: " + vcount[1]);
+                        logger.info("Inactive villagers: " + vcount[0]);
                         return true;
                     case "highlight":
                     case "hl":
@@ -78,8 +79,7 @@ public class VillagerNerferCommands implements CommandExecutor {
                             int [] count = {0};
                             Bukkit.getWorlds().forEach(world ->
                                     world.getEntities().forEach(entity -> {
-                                    if (entity instanceof Villager) {
-                                        Villager v = (Villager) entity;
+                                    if (entity instanceof Villager v) {
                                         if (!v.isAware()) {
                                             v.setGlowing(true);
                                             count[0]++;
@@ -90,15 +90,14 @@ public class VillagerNerferCommands implements CommandExecutor {
                                 commandSender.sendMessage(ChatColor.LIGHT_PURPLE + "Highlighted " + count[0] + " villagers");
                             }
                             else {
-                                System.out.println("Highlighted " + count[0] + " villagers");
+                                logger.info("Highlighted " + count[0] + " villagers");
                             }
                         }, 1);
 
                         Bukkit.getScheduler().runTaskLater(plugin, () ->
                                 Bukkit.getWorlds().forEach(world ->
                                         world.getEntities().forEach(entity -> {
-                                            if (entity instanceof Villager) {
-                                                Villager v = (Villager) entity;
+                                            if (entity instanceof Villager v) {
                                                 if (!v.isAware()) {
                                                     v.setGlowing(false);
                                                 }
@@ -107,44 +106,37 @@ public class VillagerNerferCommands implements CommandExecutor {
                         return true;
                     case "reload":
                     case "r":
-                        if (commandSender instanceof Player) {
-                            Player player = (Player) commandSender;
+                        if (commandSender instanceof Player player) {
 
                             if (player.hasPermission("vnerfer.use")) {
-                                Bukkit.getWorlds().forEach(world -> {
-                                    world.getEntities().forEach(e -> {
-                                        if (e instanceof Villager) {
-                                            Villager v = (Villager) e;
-                                            v.setAI(true);
-                                            v.setAware(true);
-                                        }
-                                    });
-                                });
+                                Bukkit.getWorlds().forEach(world -> world.getEntities().forEach(e -> {
+                                    if (e instanceof Villager v) {
+                                        v.setAI(true);
+                                        v.setAware(true);
+                                    }
+                                }));
 
                                 plugin.getStorage().clearStorage();
                                 plugin.reloadCustomConfig();
 
                                 Bukkit.getWorlds().forEach(world ->
                                         world.getEntities().forEach(entity -> {
-                                            if (entity instanceof Villager) {
-                                                Villager v = (Villager) entity;
+                                            if (entity instanceof Villager v) {
                                                 plugin.getStorage().addVillager(v);
                                             }
                                         }));
 
                                 player.sendMessage(ChatColor.LIGHT_PURPLE + "Villager data reloaded!");
-                                return true;
                             }
                             else {
                                 player.sendMessage(ChatColor.RED + "You do not have permission to use this command");
-                                return true;
                             }
+                            return true;
                         }
 
                         Bukkit.getWorlds().forEach(world ->
                                 world.getEntities().forEach(e -> {
-                                    if (e instanceof Villager) {
-                                        Villager v = (Villager) e;
+                                    if (e instanceof Villager v) {
                                         v.setAI(true);
                                         v.setAware(true);
                                     }
@@ -155,25 +147,23 @@ public class VillagerNerferCommands implements CommandExecutor {
 
                         Bukkit.getWorlds().forEach(world ->
                                 world.getEntities().forEach(entity -> {
-                                    if (entity instanceof Villager) {
-                                        Villager v = (Villager) entity;
+                                    if (entity instanceof Villager v) {
                                         plugin.getStorage().addVillager(v);
                                     }
                                 }));
 
-                        System.out.println("Villager data reloaded!");
+                        logger.info("Villager data reloaded!");
                         return true;
                     case "force":
                     case "f":
 
-                        if (commandSender instanceof Player) {
+                        if (commandSender instanceof Player player) {
 
                             if(!commandSender.hasPermission("VNerfer.force")) {
                                 commandSender.sendMessage(ChatColor.RED + "You do not have permission to use this command");
                                 return true;
                             }
 
-                            Player player = (Player) commandSender;
                             Location playerLocation = player.getLocation();
 
                             final String[] uid = {""};
@@ -182,8 +172,7 @@ public class VillagerNerferCommands implements CommandExecutor {
                             Bukkit.getWorlds().forEach(world -> {
                                 if(world.getEnvironment() == player.getWorld().getEnvironment()) {
                                     world.getEntities().forEach(entity -> {
-                                        if (entity instanceof Villager) {
-                                            Villager villager = (Villager) entity;
+                                        if (entity instanceof Villager villager) {
                                             if (playerLocation.distance(villager.getLocation()) < distance[0]) {
                                                 uid[0] = villager.getUniqueId().toString();
                                                 distance[0] = playerLocation.distance(villager.getLocation());
@@ -205,31 +194,22 @@ public class VillagerNerferCommands implements CommandExecutor {
 
                     case "help":
 
-                        if(commandSender instanceof Player) {
-                            Player player = (Player) commandSender;
-                            if(!player.hasPermission("VNerfer.help")) {
+                        if(commandSender instanceof Player player) {
+                            if (!player.hasPermission("VNerfer.help")) {
                                 player.sendMessage(ChatColor.RED + "You do not have permission to use this command");
                                 return true;
                             }
-                            player.sendMessage(ChatColor.LIGHT_PURPLE + "===============Villager Nerfer v" + plugin.getDescription().getVersion() + "===============");
-                            player.sendMessage(ChatColor.GOLD + "/vnerfer count (active/inactive): " + ChatColor.GREEN + "Display number of villagers (active or inactive) being tracked by the plugin");
-                            player.sendMessage(ChatColor.GOLD + "/vnerfer  highlight: " + ChatColor.GREEN + "Highlights all nerfed villagers");
-                            player.sendMessage(ChatColor.GOLD + "/vnerfer force (count): " + ChatColor.GREEN + "Forces the plugin to track nearest (count) villager(s)");
-                            player.sendMessage(ChatColor.GOLD + "/vnerfer reload: " + ChatColor.GREEN + "Refreshes the plugin and reloads all tracked villagers");
                         }
-                        else {
-                            System.out.println("===============Villager Nerfer v" + plugin.getDescription().getVersion() + "===============");
-                            System.out.println("/vnerfer count (active/inactive): Display number of villagers (active or inactive) being tracked by the plugin");
-                            System.out.println("/vnerfer  highlight: Highlights all nerfed villagers");
-                            System.out.println("/vnerfer force (count): Forces the plugin to track nearest (count) villager(s)");
-                            System.out.println("/vnerfer reload: Refreshes the plugin and reloads all tracked villagers");
-                        }
-
+                        commandSender.sendMessage(ChatColor.LIGHT_PURPLE + "===============Villager Nerfer v" + plugin.getDescription().getVersion() + "===============");
+                        commandSender.sendMessage(ChatColor.GOLD + "/vnerfer count (active/inactive): " + ChatColor.GREEN + "Display number of villagers (active or inactive) being tracked by the plugin");
+                        commandSender.sendMessage(ChatColor.GOLD + "/vnerfer  highlight: " + ChatColor.GREEN + "Highlights all nerfed villagers");
+                        commandSender.sendMessage(ChatColor.GOLD + "/vnerfer force (count): " + ChatColor.GREEN + "Forces the plugin to track nearest (count) villager(s)");
+                        commandSender.sendMessage(ChatColor.GOLD + "/vnerfer reload: " + ChatColor.GREEN + "Refreshes the plugin and reloads all tracked villagers");
                         return true;
 
                     case "config":
                         if(commandSender instanceof ConsoleCommandSender)
-                            plugin.getSLF4JLogger().info(plugin.getCustomConfig().toString());
+                            logger.info(plugin.getCustomConfig().toString());
                         return true;
 
                 }
@@ -247,8 +227,7 @@ public class VillagerNerferCommands implements CommandExecutor {
 
                         Bukkit.getWorlds().forEach(world ->
                                 world.getEntities().forEach(entity -> {
-                                    if (entity instanceof Villager) {
-                                        Villager v = (Villager) entity;
+                                    if (entity instanceof Villager v) {
                                         if (v.isAware()) {
                                             vcount[1]++;
                                         } else {
@@ -257,20 +236,17 @@ public class VillagerNerferCommands implements CommandExecutor {
                                     }
                                 }));
 
-                        if (commandSender instanceof Player) {
-                            Player player = (Player) commandSender;
+                        if (commandSender instanceof Player player) {
 
                             switch (strings[1]) {
-
-                                case "active":
-                                case "a":
+                                case "active", "a" -> {
                                     player.sendMessage("Active villagers: " + vcount[1]);
                                     return true;
-                                case "inactive":
-                                case "i":
+                                }
+                                case "inactive", "i" -> {
                                     player.sendMessage("Inactive villagers: " + vcount[0]);
                                     return true;
-
+                                }
                             }
 
                             player.sendMessage(ChatColor.RED + "Incorrect usage, specify active(a) or inactive(i) or nothing for both variants");
@@ -278,22 +254,20 @@ public class VillagerNerferCommands implements CommandExecutor {
                         }
 
                         switch (strings[1]) {
-
-                            case "active":
-                            case "a":
-                                System.out.println("Active villagers: " + vcount[1]);
+                            case "active", "a" -> {
+                                logger.info("Active villagers: " + vcount[1]);
                                 return true;
-                            case "inactive":
-                            case "i":
-                                System.out.println("Inactive villagers: " + vcount[0]);
+                            }
+                            case "inactive", "i" -> {
+                                logger.info("Inactive villagers: " + vcount[0]);
                                 return true;
+                            }
                         }
-                        System.out.println("Incorrect usage, specify active(a) or inactive(i) or nothing for both variants");
+                        logger.info("Incorrect usage, specify active(a) or inactive(i) or nothing for both variants");
                         return true;
                     case "force":
                     case "f":
-                        if(commandSender instanceof Player) {
-                            Player player = (Player) commandSender;
+                        if(commandSender instanceof Player player) {
                             if(!player.hasPermission("VNerfer.force")) {
                                 player.sendMessage(ChatColor.RED + "You do not have permission to use this command");
                                 return true;
@@ -320,8 +294,7 @@ public class VillagerNerferCommands implements CommandExecutor {
                             Bukkit.getWorlds().forEach(world -> {
                                 if(player.getWorld().getEnvironment() == world.getEnvironment()) {
                                     world.getEntities().forEach(entity -> {
-                                        if (entity instanceof Villager) {
-                                            Villager villager = (Villager) entity;
+                                        if (entity instanceof Villager villager) {
                                             int index = Collections.binarySearch(d, player.getLocation().distance(villager.getLocation()));
                                             if (index < 0) index = ~index;
                                             d.add(index, player.getLocation().distance(villager.getLocation()));

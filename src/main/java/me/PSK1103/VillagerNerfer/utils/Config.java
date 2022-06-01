@@ -7,13 +7,14 @@ import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
-import org.slf4j.Logger;
+
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 public class Config
 {
@@ -40,11 +41,17 @@ public class Config
 
     private int checkingMethod;
 
+    private int dangerRadiusXZ;
+
+    private int dangerRadiusY;
+
+    private boolean instantDezombification;
+
     private Material bottomBlock;
 
     public Config(VillagerNerfer plugin) {
         this.plugin = plugin;
-        this.logger = plugin.getSLF4JLogger();
+        this.logger = plugin.getLogger();
 
         checkVersion();
 
@@ -62,13 +69,13 @@ public class Config
             if(configFile.getInt("config-version",-1) == defaultConfig.getInt("config-version"))
                 return;
 
-            logger.error("Config file version mismatch");
-            logger.warn("Disabling VNerfer. Save your old config and delete it from the directory");
+            logger.severe("Config file version mismatch");
+            logger.warning("Disabling VNerfer. Save your old config and delete it from the directory");
             plugin.getPluginLoader().disablePlugin(plugin);
 
         }
         catch (IOException | InvalidConfigurationException | ClassCastException e) {
-            logger.error(e.toString());
+            logger.severe(e.toString());
         }
     }
 
@@ -97,13 +104,18 @@ public class Config
 
             bottomBlock = Material.matchMaterial(configFile.getString("bottom-block",defaultConfig.getString("bottom-block","EMERALD_BLOCK"))) != null ? Material.matchMaterial(configFile.getString("bottom-block",defaultConfig.getString("bottom-block","EMERALD_BLOCK"))) : Material.EMERALD_BLOCK;
 
+            dangerRadiusXZ = configFile.getInt("danger-radius-xz", defaultConfig.getInt("danger-radius-xz",3));
+            dangerRadiusY = configFile.getInt("danger-radius-y", defaultConfig.getInt("danger-radius-y",1));
+
+            instantDezombification = configFile.getBoolean("instant-dezombification", defaultConfig.getBoolean("instant-dezombification",false));
+
             enableTimings = configFile.getBoolean("enable-timings",defaultConfig.getBoolean("enable-timings",true));
 
             enableBstats = configFile.getBoolean("enable-bstats",defaultConfig.getBoolean("enable-bstats",true));
 
         } catch (IOException | InvalidConfigurationException e) {
-            logger.error("Failed to parse custom config");
-            logger.warn("Reverting to default config");
+            logger.severe("Failed to parse custom config");
+            logger.warning("Reverting to default config");
             loadDefaultConfig();
         }
     }
@@ -132,13 +144,18 @@ public class Config
 
             bottomBlock = Material.matchMaterial(defaultConfig.getString("bottom-block","EMERALD_BLOCK")) != null ? Material.matchMaterial(defaultConfig.getString("bottom-block","EMERALD_BLOCK")) : Material.EMERALD_BLOCK;
 
+            dangerRadiusXZ = defaultConfig.getInt("danger-radius-xz",3);
+            dangerRadiusY = defaultConfig.getInt("danger-radius-y",1);
+
+            instantDezombification = defaultConfig.getBoolean("instant-dezombification",false);
+
             enableTimings = defaultConfig.getBoolean("enable-timings",true);
 
             enableBstats = defaultConfig.getBoolean("enable-bstats",true);
 
         } catch (IOException | InvalidConfigurationException e) {
-            logger.error("Failed to parse custom config");
-            logger.warn("Reverting to default config");
+            logger.severe("Failed to parse custom config");
+            logger.warning("Reverting to default config");
             loadDefaultConfig();
         }
     }
@@ -191,6 +208,18 @@ public class Config
         return bottomBlock;
     }
 
+    public int getDangerRadiusXZ() {
+        return dangerRadiusXZ;
+    }
+
+    public int getDangerRadiusY() {
+        return dangerRadiusY;
+    }
+
+    public boolean instantDezombification() {
+        return instantDezombification;
+    }
+
     @Override
     public String toString() {
         return "Config{" +
@@ -205,6 +234,7 @@ public class Config
                 ", enableBstats=" + enableBstats +
                 ", checkingMethod=" + checkingMethod +
                 ", bottomBlock=" + bottomBlock +
+                ", instantDezombification=" + instantDezombification +
                 '}';
     }
 }
