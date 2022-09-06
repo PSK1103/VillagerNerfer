@@ -41,6 +41,8 @@ public class VillagerStorage {
 
     private int dangerRadiusY;
 
+    private int checkingMethod;
+
     private static final EnumSet<Material> TALL_IMPASSABLES = EnumSet.noneOf(Material.class);
 
     private static final EnumSet<Material> SPECIAL_IMPASSABLES = EnumSet.noneOf(Material.class);
@@ -89,6 +91,7 @@ public class VillagerStorage {
         this.nerfedNametags = plugin.getCustomConfig().getNerfedNametags();
         this.dangerRadiusXZ = plugin.getCustomConfig().getDangerRadiusXZ();
         this.dangerRadiusY = plugin.getCustomConfig().getDangerRadiusY();
+        this.checkingMethod = plugin.getCustomConfig().getCheckingMethod();
         this.nmsDepend = Inms.get(plugin);
         if(plugin.getCustomConfig().bstatsEnabled())
             addVillagerMetrics();
@@ -182,7 +185,7 @@ public class VillagerStorage {
             return true;
         }
 
-        if(canMove(v.getLocation()) || !v.getLocation().getNearbyLivingEntities(3, 1, e -> List.of(EntityType.ZOMBIE, EntityType.HUSK, EntityType.ZOMBIE_VILLAGER, EntityType.DROWNED).contains(e.getType())).isEmpty()) {
+        if(canMove(v.getLocation(), v.getCustomName()) || !v.getLocation().getNearbyLivingEntities(dangerRadiusXZ, dangerRadiusY, e -> List.of(EntityType.ZOMBIE, EntityType.HUSK, EntityType.ZOMBIE_VILLAGER, EntityType.DROWNED).contains(e.getType())).isEmpty()) {
             if(!nerfed)
                 return false;
             v.setAware(true);
@@ -217,14 +220,16 @@ public class VillagerStorage {
         return true;
     }
 
-    private boolean canMove(Location l) {
-        int method = plugin.getCustomConfig().getCheckingMethod();
-        return switch (method) {
-            case 1 -> !in1x1(l);
-            case 2 -> !standingOnForbiddenBlock(l);
-            case 3 -> !in1x1(l) && !standingOnForbiddenBlock(l);
-            default -> true;
-        };
+    private boolean canMove(Location l, String name) {
+        if ((checkingMethod & 1) != 0 && in1x1(l))
+                return false;
+        if ((checkingMethod & 2) != 0 && standingOnForbiddenBlock(l))
+                return false;
+        if ((checkingMethod & 4) != 0)
+            if ( name != null && nerfedNametags.contains(name.toLowerCase(Locale.ROOT)))
+                return false;
+
+        return true;
     }
 
     private boolean standingOnForbiddenBlock(Location l) {
@@ -486,6 +491,7 @@ public class VillagerStorage {
         this.nerfedNametags = plugin.getCustomConfig().getNerfedNametags();
         this.dangerRadiusXZ = plugin.getCustomConfig().getDangerRadiusXZ();
         this.dangerRadiusY = plugin.getCustomConfig().getDangerRadiusY();
+        this.checkingMethod = plugin.getCustomConfig().getCheckingMethod();
         if(plugin.getCustomConfig().bstatsEnabled())
             addVillagerMetrics();
         Bukkit.getScheduler().runTaskTimer(plugin, new NerfedTask(), this.inactiveCheckInterval, this.inactiveCheckInterval);

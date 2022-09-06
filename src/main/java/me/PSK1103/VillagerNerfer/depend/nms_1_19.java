@@ -112,9 +112,7 @@ public class nms_1_19 implements Inms{
 
     public <T extends net.minecraft.world.entity.Entity> void setTimingsHandler(@NotNull net.minecraft.world.entity.Entity entity, @NotNull String[] type) throws ReflectiveOperationException {
         net.minecraft.world.entity.EntityTypes<T> original = (net.minecraft.world.entity.EntityTypes<T>)this._as.get(entity);
-        plugin.getLogger().info("B - orig type " + original.id);
         net.minecraft.world.entity.EntityTypes<T> modified = (net.minecraft.world.entity.EntityTypes<T>) getType(original, type);
-        plugin.getLogger().info("C - mod type " + modified.id);
         this._as.set(entity, modified);
     }
 
@@ -155,7 +153,6 @@ public class nms_1_19 implements Inms{
             if (this.originals.containsKey(nmsEntity.ad()))
                 return;
             nmsEntity.spawnReason = CreatureSpawnEvent.SpawnReason.CUSTOM;
-            plugin.getLogger().info("A - type " + EntityTypes.a(nmsEntity.ad()).a());
             setTimingsHandler(nmsEntity, new String[] { "tick (Lobotomized)", "inactiveTick (Lobotomized)", "passengerTick (Lobotomized)", "passengerInactiveTick (Lobotomized)" });
         } catch (Throwable e) {
             this.enabled = false;

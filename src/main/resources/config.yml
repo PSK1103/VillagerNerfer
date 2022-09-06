@@ -1,5 +1,5 @@
 #this is used to verify the config is up to date. do not modify this
-config-version: 2
+config-version: 3
 
 #sets the number of ticks after which the plugin checks for villager's position
 active-check-interval: 200
@@ -25,15 +25,18 @@ nerfed-nametags:
 show-nerfed-nametag: false
 
 #sets the checking method you want to use
-#1 - check if a villager is in a 1x1 with no way to get out
-#2 - check if a villager is standing on a particular block: EMERALD_BLOCK on default
-#3 - both checks will be executed
-checking-method: 1
+#hole detection - check if a villager is in a 1x1 with no way to get out
+#nerf-block - check if a villager is standing on a particular block: EMERALD_BLOCK on default
+#nerfed-nametag - check if a villager is nametagged with a particular name: [nerfed] on default. No need to set skip-nametagged-villagers to true
+#at least one of these should be set to true
+hole-detection: true
+nerf-block: false
+nerfed-nametag: false
 
-#if checking-method is 2 or 3, sets the material of block underneath the villager
+#sets the type of block underneath the villager that will be considered as a nerf-block
 bottom-block: EMERALD_BLOCK
 
-#villager AI will be reenabled if any of the zombie family mobs are present in this range
+#villager AI will be reenabled if any of the zombie family mobs (zombie, husk, drowned, zombie villager) are present in this range
 danger-radius-xz: 3
 danger-radius-y: 1
 

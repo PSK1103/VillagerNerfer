@@ -41,7 +41,11 @@ public class Config
 
     private boolean enableBstats;
 
-    private int checkingMethod;
+    private boolean holeDetectionCheck;
+
+    private boolean nerfBlockCheck;
+
+    private boolean nerfedNametagCheck;
 
     private int dangerRadiusXZ;
 
@@ -107,7 +111,9 @@ public class Config
 
             showNerfedNametag = configFile.getBoolean("show-nerfed-nametag",defaultConfig.getBoolean("show-nerfed-nametag",false));
 
-            checkingMethod = configFile.getInt("checking-method",defaultConfig.getInt("checking-method",1));
+            holeDetectionCheck = configFile.getBoolean("hole-detection",defaultConfig.getBoolean("hole-detection",true));
+            nerfBlockCheck = configFile.getBoolean("nerf-block",defaultConfig.getBoolean("nerf-block",false));
+            nerfedNametagCheck = configFile.getBoolean("nerfed-nametag",defaultConfig.getBoolean("nerfed-nametag",false));
 
             bottomBlock = Material.matchMaterial(configFile.getString("bottom-block",defaultConfig.getString("bottom-block","EMERALD_BLOCK"))) != null ? Material.matchMaterial(configFile.getString("bottom-block",defaultConfig.getString("bottom-block","EMERALD_BLOCK"))) : Material.EMERALD_BLOCK;
 
@@ -147,7 +153,9 @@ public class Config
 
             showNerfedNametag = defaultConfig.getBoolean("show-nerfed-nametag",false);
 
-            checkingMethod = defaultConfig.getInt("checking-method",1);
+            holeDetectionCheck = defaultConfig.getBoolean("hole-detection",true);
+            nerfBlockCheck = defaultConfig.getBoolean("nerf-block",false);
+            nerfedNametagCheck = defaultConfig.getBoolean("nerfed-nametag",false);
 
             bottomBlock = Material.matchMaterial(defaultConfig.getString("bottom-block","EMERALD_BLOCK")) != null ? Material.matchMaterial(defaultConfig.getString("bottom-block","EMERALD_BLOCK")) : Material.EMERALD_BLOCK;
 
@@ -208,6 +216,16 @@ public class Config
     }
 
     public int getCheckingMethod() {
+        int checkingMethod = 0;
+        if (holeDetectionCheck) {
+            checkingMethod += 1;
+        }
+        if (nerfBlockCheck) {
+            checkingMethod += 2;
+        }
+        if (nerfedNametagCheck) {
+            checkingMethod += 4;
+        }
         return checkingMethod;
     }
 
@@ -243,7 +261,7 @@ public class Config
                 ", nerfedNametags=" + nerfedNametags +
                 ", enableTimings=" + enableTimings +
                 ", enableBstats=" + enableBstats +
-                ", checkingMethod=" + checkingMethod +
+                ", checkingMethod=" + getCheckingMethod() +
                 ", bottomBlock=" + bottomBlock +
                 ", instantDezombification=" + instantDezombification +
                 '}';
