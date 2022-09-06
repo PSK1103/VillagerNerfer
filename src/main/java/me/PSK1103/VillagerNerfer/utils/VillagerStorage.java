@@ -5,7 +5,7 @@ import java.util.*;
 import me.PSK1103.VillagerNerfer.VillagerNerfer;
 import me.PSK1103.VillagerNerfer.depend.Inms;
 import org.bukkit.*;
-import org.bukkit.craftbukkit.v1_18_R2.entity.CraftVillager;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftVillager;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Villager;
@@ -131,7 +131,7 @@ public class VillagerStorage {
             int currentLevel = v.getVillagerLevel();
             int newLevel = setLevel(v.getVillagerExperience());
             for (int i = 0;i<newLevel-currentLevel;i++)
-                ((CraftVillager)v).getHandle().gh();
+                ((CraftVillager)v).getHandle().gq();
 
             List<MerchantRecipe> recipes = v.getRecipes();
             if (Bukkit.getServer().getWorlds().get(0).getTime() <= 2000L && Bukkit.getServer().getWorlds().get(0).getTime() > 2000L - VillagerStorage.this.inactiveCheckInterval) {

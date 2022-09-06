@@ -4,7 +4,7 @@ import co.aikar.timings.MinecraftTimings;
 import co.aikar.timings.Timing;
 import co.aikar.timings.Timings;
 import me.PSK1103.VillagerNerfer.VillagerNerfer;
-import org.bukkit.craftbukkit.v1_18_R2.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;

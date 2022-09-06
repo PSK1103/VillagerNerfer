@@ -21,45 +21,45 @@ import java.lang.reflect.Field;
 public class EntityTypeClone<T extends Entity> extends EntityTypes<T> {
     private final EntityTypes<T> original;
 
-    private final EntityTypes.b<T> bn;
+    private final EntityTypes.b<T> bs;
 
-    private String bw;
+    private String bB;
 
-    private MinecraftKey by;
+    private MinecraftKey bD;
 
-    public EntityTypeClone(@NotNull EntityTypes<T> original, EntityTypes.b<T> entitytypes_b, EnumCreatureType enumcreaturetype, boolean flag, boolean flag1, boolean flag2, boolean flag3, ImmutableSet<Block> immutableset, EntitySize entitysize, int i, int j, String id) {
-        super(entitytypes_b, enumcreaturetype, flag, flag1, flag2, flag3, immutableset, entitysize, i, j, id);
+    public EntityTypeClone(@NotNull EntityTypes<T> original, EntityTypes.b<T> factory, EnumCreatureType spawnGroup, boolean saveable, boolean summonable, boolean fireImmune, boolean spawnableFarFromPlayer, ImmutableSet<Block> canSpawnInside, EntitySize dimensions, int maxTrackDistance, int trackTickInterval, String id) {
+        super(factory, spawnGroup, saveable, summonable, fireImmune, spawnableFarFromPlayer, canSpawnInside, dimensions, maxTrackDistance, trackTickInterval, id);
         this.original = original;
-        this.bn = entitytypes_b;
+        this.bs = factory;
     }
 
     public @NotNull String g() {
-        if (this.bw == null)
-            this.bw = SystemUtils.a("entity", IRegistry.W.b(this.original));
-        return this.bw;
+        if (this.bB == null)
+            this.bB = SystemUtils.a("entity", IRegistry.X.b(this.original));
+        return this.bB;
     }
 
     public @NotNull MinecraftKey j() {
-        if (this.by == null) {
-            MinecraftKey minecraftkey = IRegistry.W.b(this.original);
-            this.by = new MinecraftKey(minecraftkey.b(), "entities/" + minecraftkey.a());
+        if (this.bD == null) {
+            MinecraftKey minecraftkey = IRegistry.X.b(this.original);
+            this.bD = new MinecraftKey(minecraftkey.b(), "entities/" + minecraftkey.a());
         }
-        return this.by;
+        return this.bD;
     }
 
     @Nullable
     public T a(World world) {
-        return (T)this.bn.create(this.original, world);
+        return (T)this.bs.create(this.original, world);
     }
 
     public boolean p() {
-        return (this.original != EntityTypes.bi && this.original != EntityTypes.W && this.original != EntityTypes.aZ && this.original != EntityTypes.f && this.original != EntityTypes.R && this.original != EntityTypes.H && this.original != EntityTypes.T && this.original != EntityTypes.aj && this.original != EntityTypes.u && this.original != EntityTypes.z);
+        return (this.original != EntityTypes.bn && this.original != EntityTypes.Z && this.original != EntityTypes.be && this.original != EntityTypes.g && this.original != EntityTypes.U && this.original != EntityTypes.K && this.original != EntityTypes.W && this.original != EntityTypes.am && this.original != EntityTypes.w && this.original != EntityTypes.B);
     }
 
     public boolean a(TagKey<EntityTypes<?>> tag) {
         try {
-            Field _bl = EntityTypes.class.getDeclaredField("bl");
-            return ((Holder.c<EntityTypes<?>>)_bl.get(original)).a(tag);
+            Field _bq = EntityTypes.class.getDeclaredField("bq");
+            return ((Holder.c<EntityTypes<?>>)_bq.get(original)).a(tag);
         } catch (NoSuchFieldException | IllegalAccessException ignored) {
         }
         return false;

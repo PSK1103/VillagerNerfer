@@ -11,7 +11,7 @@ import net.minecraft.world.entity.EntitySize;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EnumCreatureType;
 import net.minecraft.world.level.block.Block;
-import org.bukkit.craftbukkit.v1_18_R2.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_19_R1.entity.CraftEntity;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.jetbrains.annotations.NotNull;
 
@@ -22,56 +22,56 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 
-public class nms_1_17 implements Inms{
+public class nms_1_19 implements Inms{
     private final VillagerNerfer plugin;
     private final Map<EntityTypes<?>, Map<String[], EntityTypes<?>>> cache;
     private final Map<EntityTypes<?>, EntityTypes<?>> originals;
     private boolean enabled;
 
-    private final Field _bn;
-    private final Field _bo;
-    private final Field _bp;
-    private final Field _bq;
-    private final Field _br;
     private final Field _bs;
     private final Field _bt;
     private final Field _bu;
     private final Field _bv;
+    private final Field _bw;
+    private final Field _bx;
+    private final Field _by;
     private final Field _bz;
+    private final Field _bA;
+    private final Field _bE;
     private final Field _id;
     private final Field _tickTimer;
     private final Field _inactiveTickTimer;
     private final Field _passengerTickTimer;
     private final Field _passengerInactiveTickTimer;
     private final Field _as;
-    private final Field _materials_bE;
+    private final Field _materials_bT;
 
-    public nms_1_17(VillagerNerfer plugin) throws ReflectiveOperationException{
+    public nms_1_19(VillagerNerfer plugin) throws ReflectiveOperationException{
         this.plugin = plugin;
         cache = new HashMap<>();
         originals = new HashMap<>();
         enabled = true;
-        this._bn = EntityTypes.class.getDeclaredField("bn");
-        this._bo = EntityTypes.class.getDeclaredField("bo");
-        this._bp = EntityTypes.class.getDeclaredField("bp");
-        this._bq = EntityTypes.class.getDeclaredField("bq");
-        this._br = EntityTypes.class.getDeclaredField("br");
         this._bs = EntityTypes.class.getDeclaredField("bs");
         this._bt = EntityTypes.class.getDeclaredField("bt");
         this._bu = EntityTypes.class.getDeclaredField("bu");
         this._bv = EntityTypes.class.getDeclaredField("bv");
+        this._bw = EntityTypes.class.getDeclaredField("bw");
+        this._bx = EntityTypes.class.getDeclaredField("bx");
+        this._by = EntityTypes.class.getDeclaredField("by");
         this._bz = EntityTypes.class.getDeclaredField("bz");
+        this._bA = EntityTypes.class.getDeclaredField("bA");
+        this._bE = EntityTypes.class.getDeclaredField("bE");
         this._id = EntityTypes.class.getDeclaredField("id");
-        this._bn.setAccessible(true);
-        this._bo.setAccessible(true);
-        this._bp.setAccessible(true);
-        this._bq.setAccessible(true);
-        this._br.setAccessible(true);
         this._bs.setAccessible(true);
         this._bt.setAccessible(true);
         this._bu.setAccessible(true);
         this._bv.setAccessible(true);
+        this._bw.setAccessible(true);
+        this._bx.setAccessible(true);
+        this._by.setAccessible(true);
         this._bz.setAccessible(true);
+        this._bA.setAccessible(true);
+        this._bE.setAccessible(true);
         this._id.setAccessible(true);
         this._tickTimer = EntityTypes.class.getField("tickTimer");
         this._inactiveTickTimer = EntityTypes.class.getField("inactiveTickTimer");
@@ -83,8 +83,8 @@ public class nms_1_17 implements Inms{
         this._passengerInactiveTickTimer.setAccessible(true);
         this._as = net.minecraft.world.entity.Entity.class.getDeclaredField("as");
         this._as.setAccessible(true);
-        this._materials_bE = RegistryMaterials.class.getDeclaredField("bE");
-        this._materials_bE.setAccessible(true);
+        this._materials_bT = RegistryMaterials.class.getDeclaredField("bT");
+        this._materials_bT.setAccessible(true);
         try {
             Field rootField = Field.class.getDeclaredField("root");
             rootField.setAccessible(true);
@@ -128,8 +128,8 @@ public class nms_1_17 implements Inms{
     private <T extends net.minecraft.world.entity.Entity> net.minecraft.world.entity.EntityTypes<T> cloneType(@NotNull net.minecraft.world.entity.EntityTypes<T> original, String[] type) {
         try {
             String id = (String)this._id.get(original);
-            EntityTypeClone<T> clone = new EntityTypeClone<>(original, (net.minecraft.world.entity.EntityTypes.b<T>)this._bn.get(original), (EnumCreatureType) this._bo.get(original), ((Boolean)this._bq.get(original)).booleanValue(), ((Boolean)this._br.get(original)).booleanValue(), ((Boolean)this._bs.get(original)).booleanValue(), ((Boolean)this._bt.get(original)).booleanValue(), (ImmutableSet<Block>)this._bp.get(original), (EntitySize) this._bz.get(original), ((Integer)this._bu.get(original)).intValue(), ((Integer)this._bv.get(original)).intValue(), id);
-            Map ids = (Map)this._materials_bE.get(IRegistry.W);
+            EntityTypeClone<T> clone = new EntityTypeClone<>(original, (net.minecraft.world.entity.EntityTypes.b<T>)this._bs.get(original), (EnumCreatureType) this._bt.get(original), (Boolean) this._bv.get(original), (Boolean) this._bw.get(original), (Boolean) this._bx.get(original), (Boolean) this._by.get(original), (ImmutableSet<Block>)this._bu.get(original), (EntitySize) this._bE.get(original), (Integer) this._bz.get(original), (Integer) this._bA.get(original), id);
+            Map ids = (Map)this._materials_bT.get(IRegistry.X);
             ids.put(clone, ids.get(original));
             Timing tickTimer = (type.length > 0 && type[0] != null) ? MinecraftTimings.getEntityTimings(id, type[0]) : original.tickTimer;
             Timing inactiveTickTimer = (type.length > 1 && type[1] != null) ? MinecraftTimings.getEntityTimings(id, type[1]) : original.tickTimer;
@@ -201,12 +201,12 @@ public class nms_1_17 implements Inms{
                     at be.isach.ultracosmetics.v1_18_R2.customentities.CustomEntities.registerEntity(CustomEntities.java:78) ~[?:?]
         */
         try {
-            Field intrusiveHolderCache = RegistryMaterials.class.getDeclaredField("bN");
+            Field intrusiveHolderCache = RegistryMaterials.class.getDeclaredField("cc");
             intrusiveHolderCache.setAccessible(true);
-            intrusiveHolderCache.set(IRegistry.W, new IdentityHashMap<>());
-            Field frozen = RegistryMaterials.class.getDeclaredField("bL");
+            intrusiveHolderCache.set(IRegistry.X, new IdentityHashMap<>());
+            Field frozen = RegistryMaterials.class.getDeclaredField("ca");
             frozen.setAccessible(true);
-            frozen.set(IRegistry.W, false);
+            frozen.set(IRegistry.X, false);
         } catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
             e.printStackTrace();
         }
